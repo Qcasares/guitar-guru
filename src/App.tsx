@@ -16,6 +16,8 @@ import { onInstallPromptAvailable } from './lib/pwa';
 import { RhythmView } from './views/RhythmView';
 import { LeadGodmodeView } from './views/LeadGodmodeView';
 import { Transport } from './audio/transport';
+import { AudioTrack } from './audio/audio-track';
+import { deleteBlob, getBlob, listBlobIds } from './lib/audio-storage';
 import { click as metronomeClick, primeAudio } from './audio/metronome';
 import { speak, stop as stopVoice } from './audio/voice';
 import { strum, playTabNote } from './audio/synth';
@@ -27,7 +29,7 @@ import { parseCommand, commandLabel, type Command } from './voice/parser';
 import { CHORD_LIB } from './music/chords';
 import { SAMPLE_SONG } from './music/songs';
 import { FINGER_NAME } from './music/finger-colors';
-import type { Density, PlaybackMode, Song, Theme } from './music/types';
+import type { AudioTrackRef, Density, PlaybackMode, Song, Theme } from './music/types';
 
 const SONG_STORAGE_KEY = 'guitarguru.song.v1';
 
@@ -161,6 +163,16 @@ export function App() {
   const isNarrow = useIsNarrow(600);
 
   const transportRef = useRef<Transport | null>(null);
+  const audioTrackRef = useRef<AudioTrack | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const [trackLoaded, setTrackLoaded] = useState(false);
+  const [trackOn, setTrackOn] = useState(true);
+  const prevBeatRef = useRef(0);
+  const stretchSupported = useMemo(
+    () => typeof HTMLMediaElement !== 'undefined' && 'preservesPitch' in HTMLMediaElement.prototype,
+    [],
+  );
 
   // Loop range priority: explicit A-B markers > section-loop toggle > off.
   const loopRange = useMemo(() => {
@@ -274,6 +286,131 @@ export function App() {
   }, [song.bpm, totalBeats, tempoScale, loopRange, handleTick, handleBeat]);
 
   useEffect(() => () => transportRef.current?.dispose(), []);
+
+  const getAudioCtx = useCallback((): AudioContext => {
+    if (!audioCtxRef.current) {
+      const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+      audioCtxRef.current = new Ctor();
+    }
+    return audioCtxRef.current;
+  }, []);
+
+  const ensureAudioLoaded = useCallback(async (ref: AudioTrackRef): Promise<void> => {
+    try {
+      audioTrackRef.current?.dispose();
+      audioTrackRef.current = null;
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+      const ctx = getAudioCtx();
+      const track = new AudioTrack({
+        audioContext: ctx,
+        onEnded: () => announce('Audio track ended'),
+      });
+      audioTrackRef.current = track;
+
+      let url: string;
+      if (ref.source.kind === 'blob') {
+        const blob = await getBlob(ref.source.blobId);
+        if (!blob) {
+          setTrackLoaded(false);
+          return;
+        }
+        url = URL.createObjectURL(blob);
+        objectUrlRef.current = url;
+      } else {
+        url = ref.source.url;
+      }
+      await track.load(url);
+      setTrackLoaded(true);
+      setTrackOn(true);
+    } catch {
+      setTrackLoaded(false);
+    }
+  }, [announce, getAudioCtx]);
+
+  // Boot once: GC orphan blobs (anything not referenced by the current song)
+  // and restore the attached audio track if the song has one.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const currentBlobId = song.audio?.source.kind === 'blob' ? song.audio.source.blobId : null;
+        const all = await listBlobIds();
+        for (const id of all) {
+          if (id !== currentBlobId) await deleteBlob(id);
+        }
+        if (cancelled) return;
+        if (song.audio) await ensureAudioLoaded(song.audio);
+      } catch {
+        // GC/restore failures are non-fatal; user just re-attaches.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, []);
+
+  // Re-load the audio track whenever the song's audio reference changes
+  // (attach, swap, or detach).
+  const audioKey = song.audio
+    ? song.audio.source.kind === 'blob'
+      ? `blob:${song.audio.source.blobId}`
+      : `url:${song.audio.source.url}`
+    : null;
+  useEffect(() => {
+    if (!song.audio) {
+      audioTrackRef.current?.dispose();
+      audioTrackRef.current = null;
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+      setTrackLoaded(false);
+      return;
+    }
+    void ensureAudioLoaded(song.audio);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- audioKey captures identity
+  }, [audioKey]);
+
+  // Detect beat jumps that aren't a natural +1 tick (loop wrap, manual seek,
+  // bar skip, restart) and re-seek the audio to match.
+  useEffect(() => {
+    const delta = beat - prevBeatRef.current;
+    if (Math.abs(delta) > 1 && song.audio && trackLoaded && audioTrackRef.current) {
+      void audioTrackRef.current.seekToBeat(beat, song.bpm, song.audio.offsetSec);
+    }
+    prevBeatRef.current = beat;
+  }, [beat, song, trackLoaded]);
+
+  // Keep the audio element's playbackRate synced with the tempoScale state.
+  useEffect(() => {
+    audioTrackRef.current?.setTempoScale(tempoScale);
+  }, [tempoScale]);
+
+  const onToggleTrack = useCallback(() => {
+    setTrackOn((prev) => {
+      const next = !prev;
+      audioTrackRef.current?.mute(!next);
+      announce(next ? 'Track on' : 'Track off');
+      return next;
+    });
+  }, [announce]);
+
+  // Call when the transport is about to start playback — seeks and plays the
+  // attached recording at the current beat.
+  const startAudio = useCallback(() => {
+    if (!song.audio || !trackLoaded || !trackOn || !audioTrackRef.current) return;
+    const t = transportRef.current;
+    const currentBeat = t ? Math.floor(beat) : 0;
+    void audioTrackRef.current.play(currentBeat, song.bpm, song.audio.offsetSec, tempoScale);
+  }, [song, trackLoaded, trackOn, beat, tempoScale]);
+
+  const pauseAudio = useCallback(() => {
+    audioTrackRef.current?.pause();
+  }, []);
 
   // Restore playback position once the transport exists. We only do this on
   // first mount; thereafter the user is in control of where the playhead is.
@@ -408,6 +545,7 @@ export function App() {
       if (remaining <= 0) {
         setCountIn(0);
         transportRef.current?.play();
+        startAudio();
         return;
       }
       setCountIn(remaining);
@@ -416,7 +554,7 @@ export function App() {
       window.setTimeout(tick, beatMs);
     };
     window.setTimeout(tick, beatMs);
-  }, [tempoScale, voice]);
+  }, [tempoScale, voice, startAudio]);
 
   const currentBarIdx = Math.floor(beat / song.beatsPerBar);
   const toggleLoopA = useCallback(() => {
@@ -431,9 +569,14 @@ export function App() {
     setVoiceToast(commandLabel(cmd));
     const t = transportRef.current;
     switch (cmd.kind) {
-      case 'play': primeAudio(); t?.play(); break;
-      case 'pause': t?.pause(); break;
-      case 'toggle-play': primeAudio(); t?.toggle(); break;
+      case 'play': primeAudio(); t?.play(); startAudio(); break;
+      case 'pause': t?.pause(); pauseAudio(); break;
+      case 'toggle-play':
+        primeAudio();
+        t?.toggle();
+        if (t?.isPlaying()) startAudio();
+        else pauseAudio();
+        break;
       case 'next': t?.seekBars(1, song.beatsPerBar); break;
       case 'prev': t?.seekBars(-1, song.beatsPerBar); break;
       case 'restart': t?.seek(0); stopVoice(); break;
@@ -461,7 +604,7 @@ export function App() {
       case 'loop-b': toggleLoopB(); break;
       case 'loop-clear': clearLoopAB(); break;
     }
-  }, [song, beat, toggleLoopA, toggleLoopB, clearLoopAB]);
+  }, [song, beat, toggleLoopA, toggleLoopB, clearLoopAB, startAudio, pauseAudio]);
 
   const speakStatus = useCallback(() => {
     const barIdxNow = Math.floor(beat / song.beatsPerBar);
@@ -516,12 +659,16 @@ export function App() {
     if (!t) return;
     if (t.isPlaying()) {
       t.pause();
+      pauseAudio();
       setCountIn(0);
       return;
     }
     if (countInEnabled) runCountIn();
-    else t.play();
-  }, [countInEnabled, runCountIn]);
+    else {
+      t.play();
+      startAudio();
+    }
+  }, [countInEnabled, runCountIn, pauseAudio, startAudio]);
   const onRestart = useCallback(() => {
     transportRef.current?.seek(0);
     stopVoice();
@@ -558,10 +705,11 @@ export function App() {
       else if (e.key === '[') { e.preventDefault(); toggleLoopA(); }
       else if (e.key === ']') { e.preventDefault(); toggleLoopB(); }
       else if (e.key === '\\') { e.preventDefault(); clearLoopAB(); }
+      else if (e.key.toLowerCase() === 'a') { if (trackLoaded) { e.preventDefault(); onToggleTrack(); } }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onPlayPause, onNext, onPrev, onRestart, speakStatus, song, beat, toggleLoopA, toggleLoopB, clearLoopAB]);
+  }, [onPlayPause, onNext, onPrev, onRestart, speakStatus, song, beat, toggleLoopA, toggleLoopB, clearLoopAB, trackLoaded, onToggleTrack]);
 
   const currentSection = [...song.sections].reverse().find((s) => s.barOffset <= Math.floor(beat / song.beatsPerBar)) ?? song.sections[0];
   const currentBar = song.bars[Math.floor(beat / song.beatsPerBar)];
@@ -659,6 +807,18 @@ export function App() {
           <SongImportDialog
             currentSong={song}
             onApply={(next) => {
+              const prevAudio = song.audio;
+              const nextAudio = next.audio;
+              const attached = !prevAudio && !!nextAudio;
+              const modeChanged = !!prevAudio && !!nextAudio && prevAudio.mode !== nextAudio.mode;
+              if ((attached || modeChanged) && nextAudio) {
+                if (nextAudio.mode === 'playalong' || nextAudio.mode === 'teacher') {
+                  setSynthOn(false);
+                }
+                if (nextAudio.mode === 'teacher') setVoice(true);
+                else if (nextAudio.mode === 'playalong') setVoice(false);
+                setMetronome(false);
+              }
               setSong(next);
               transportRef.current?.seek(0);
               stopVoice();
@@ -746,6 +906,24 @@ export function App() {
             <b>{Math.round(song.bpm * tempoScale)}</b>
             <span style={{ color: 'var(--ink-mute)', fontWeight: 700, fontSize: 14 }}>BPM · {song.beatsPerBar}/4</span>
           </div>
+
+          {song.audio && trackLoaded && (
+            <div className="gg-card" style={{ borderColor: 'var(--accent)' }}>
+              <h3 style={{ color: 'var(--accent)' }}>🎵 Track</h3>
+              <div style={{ fontSize: 15, fontWeight: 800, wordBreak: 'break-all' }}>
+                {song.audio.source.kind === 'blob'
+                  ? song.audio.filename ?? 'Attached file'
+                  : song.audio.source.url}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-mute)', fontWeight: 700, marginTop: 4 }}>
+                {song.audio.mode === 'playalong' ? 'Play-along' : song.audio.mode === 'backing' ? 'Backing track' : 'Teacher track'}
+                {trackOn ? ' · on' : ' · muted'} · offset {song.audio.offsetSec.toFixed(2)}s
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 4 }}>
+                Press <b>A</b> to toggle
+              </div>
+            </div>
+          )}
 
           {(loopA !== null || loopB !== null) && (
             <div className="gg-card" style={{ borderColor: 'var(--accent)' }}>
@@ -936,6 +1114,10 @@ export function App() {
             onToggleLoopA={toggleLoopA}
             onToggleLoopB={toggleLoopB}
             onClearLoopAB={clearLoopAB}
+            trackLoaded={trackLoaded}
+            trackOn={trackOn}
+            stretchSupported={stretchSupported}
+            onToggleTrack={onToggleTrack}
             onToggleVoice={() => {
               setVoice((v) => {
                 if (v) stopVoice();
@@ -944,7 +1126,7 @@ export function App() {
             }}
           />
           <div style={{ marginTop: 8, fontSize: 13, textAlign: 'center' }}>
-            Shortcuts: <b>Space</b> play · <b>← →</b> bar · <b>R</b> restart · <b>M</b> mode · <b>Z</b> close-up · <b>I</b> import · <b>L</b> listen · <b>V</b> voice · <b>?</b> status · <b>T</b> trainer · <b>G</b> ramp · <b>D</b> narrate · <b>F</b> focus · <b>[ ]</b> A/B loop · <b>\</b> clear ·
+            Shortcuts: <b>Space</b> play · <b>← →</b> bar · <b>R</b> restart · <b>M</b> mode · <b>Z</b> close-up · <b>I</b> import · <b>L</b> listen · <b>V</b> voice · <b>?</b> status · <b>T</b> trainer · <b>G</b> ramp · <b>D</b> narrate · <b>F</b> focus · <b>[ ]</b> A/B loop · <b>\</b> clear · <b>A</b> track ·
             {' '}
             {Object.keys(CHORD_LIB).length} chord shapes loaded
           </div>

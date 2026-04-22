@@ -14,6 +14,9 @@ interface PlaybackControlsProps {
   showTabToggleEnabled: boolean;
   loopA: number | null;
   loopB: number | null;
+  trackLoaded: boolean;
+  trackOn: boolean;
+  stretchSupported: boolean;
   onPlayPause: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -29,6 +32,7 @@ interface PlaybackControlsProps {
   onToggleLoopA: () => void;
   onToggleLoopB: () => void;
   onClearLoopAB: () => void;
+  onToggleTrack: () => void;
 }
 
 export function PlaybackControls({
@@ -45,6 +49,9 @@ export function PlaybackControls({
   showTabToggleEnabled,
   loopA,
   loopB,
+  trackLoaded,
+  trackOn,
+  stretchSupported,
   onPlayPause,
   onPrev,
   onNext,
@@ -60,6 +67,7 @@ export function PlaybackControls({
   onToggleLoopA,
   onToggleLoopB,
   onClearLoopAB,
+  onToggleTrack,
 }: PlaybackControlsProps) {
   const abActive = loopA !== null && loopB !== null && loopA < loopB;
   return (
@@ -108,6 +116,29 @@ export function PlaybackControls({
       <BigButton size="md" active={metronome} onClick={onToggleMetronome} label="Toggle metronome">METRO</BigButton>
       <BigButton size="md" active={countIn} onClick={onToggleCountIn} label="Toggle count-in">COUNT-IN</BigButton>
       <BigButton size="md" active={synth} onClick={onToggleSynth} label="Toggle synth playback">♫ SYNTH</BigButton>
+      {trackLoaded && (
+        <BigButton size="md" active={trackOn} onClick={onToggleTrack} label="Toggle recorded audio track">
+          🎵 TRACK
+        </BigButton>
+      )}
+      {trackLoaded && trackOn && Math.abs(tempoScale - 1) > 0.01 && (
+        <span
+          style={{
+            alignSelf: 'center',
+            fontSize: 11,
+            fontWeight: 900,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            padding: '4px 8px',
+            borderRadius: 6,
+            border: '2px solid var(--ink)',
+            background: stretchSupported ? 'var(--accent-green)' : 'var(--accent-orange)',
+            color: '#fff',
+          }}
+          aria-live="polite">
+          {stretchSupported ? 'pitch-stretch' : 'no stretch'}
+        </span>
+      )}
       <BigButton size="md" active={voice} onClick={onToggleVoice} label="Toggle voice announce">🎙 VOICE</BigButton>
       {hapticsAvailable && (
         <BigButton size="md" active={haptics} onClick={onToggleHaptics} label="Toggle haptic beat pulse">📳 HAPTIC</BigButton>
