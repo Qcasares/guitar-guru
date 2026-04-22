@@ -1,0 +1,73 @@
+# Auto-deploy to Cloudflare Pages on every push to main, plus preview
+# deploys on PRs. Dormant until the two required secrets exist — the
+# workflow still runs but the final `wrangler-action` step exits 1 with
+# a clear message.
+#
+# One-time setup (GitHub repo → Settings → Secrets and variables → Actions):
+#   1. CLOUDFLARE_API_TOKEN
+#      - dash.cloudflare.com → My Profile → API Tokens → Create Token
+#      - Use the "Edit Cloudflare Workers" template
+#      - Scope: Account = include your account, Zone = none needed for Pages
+#      - Copy the token (shown once) into the GitHub secret
+#   2. CLOUDFLARE_ACCOUNT_ID
+#      - dash.cloudflare.com → right sidebar of any page has the Account ID
+#      - Copy to GitHub secret
+#
+# After the secrets are in place, a plain `git push origin main` ships a
+# deploy; PRs get a unique *.guitar-guru.pages.dev preview URL.
+
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write  # for preview-URL PR comments
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Guard — require Cloudflare secrets
+        run: |
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] || [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "::warning title=Cloudflare secrets missing::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to enable auto-deploy. Skipping deploy step."
+            exit 0
+          fi
+          echo "Cloudflare secrets present — deploy step will run."
+
+      - name: Deploy to Cloudflare Pages
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=guitar-guru --branch=${{ github.head_ref || github.ref_name }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
