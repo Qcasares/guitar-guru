@@ -766,6 +766,40 @@ export function App() {
 
       <main className="gg-main" id="gg-main" tabIndex={-1}>
         <section className="gg-stage" aria-label={mode === 'rhythm' ? 'Rhythm guitar display' : 'Lead GODMODE display'}>
+          <div className="gg-status-rail" role="region" aria-label="Playback status">
+            <div className="gg-status-chip">
+              <span className="key">Mode</span>
+              <span className="val">{mode === 'rhythm' ? 'Rhythm' : 'Lead'}</span>
+            </div>
+            <div className="gg-status-chip">
+              <span className="key">Section</span>
+              <span className="val">{currentSection?.name ?? '—'}</span>
+            </div>
+            <div className="gg-status-chip">
+              <span className="key">Bar</span>
+              <span className="val">{Math.floor(beat / song.beatsPerBar) + 1} / {song.bars.length}</span>
+            </div>
+            <div className="gg-status-chip">
+              <span className="key">BPM</span>
+              <span className="val">{Math.round(song.bpm * tempoScale)}</span>
+            </div>
+            <div className={`gg-status-chip${loopActive || (loopA !== null && loopB !== null && loopA < loopB) ? ' is-active' : ''}`}>
+              <span className="key">Loop</span>
+              <span className="val">
+                {loopA !== null && loopB !== null && loopA < loopB
+                  ? `${loopA + 1}–${loopB + 1}`
+                  : loopActive
+                    ? 'Section'
+                    : 'Off'}
+              </span>
+            </div>
+            {song.audio && trackLoaded && (
+              <div className={`gg-status-chip${trackOn ? ' is-active' : ''}`}>
+                <span className="key">Track</span>
+                <span className="val">{trackOn ? 'On' : 'Muted'}</span>
+              </div>
+            )}
+          </div>
           {mode === 'rhythm' ? (
             <RhythmView
               song={song}
@@ -906,6 +940,29 @@ export function App() {
             <b>{Math.round(song.bpm * tempoScale)}</b>
             <span style={{ color: 'var(--ink-mute)', fontWeight: 700, fontSize: 14 }}>BPM · {song.beatsPerBar}/4</span>
           </div>
+
+          {song.sections.length > 1 && (
+            <div className="gg-card">
+              <h3>Sections</h3>
+              <div className="gg-sections-nav">
+                {song.sections.map((section) => {
+                  const isCurrent = section === currentSection;
+                  return (
+                    <button
+                      key={`${section.name}-${section.barOffset}`}
+                      aria-current={isCurrent}
+                      onClick={() => {
+                        transportRef.current?.seek(section.barOffset * song.beatsPerBar);
+                        announce(`Jumped to ${section.name}`);
+                      }}>
+                      <span>{section.name}</span>
+                      <span className="meta">bar {section.barOffset + 1}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {song.audio && trackLoaded && (
             <div className="gg-card" style={{ borderColor: 'var(--accent)' }}>

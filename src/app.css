@@ -673,7 +673,7 @@ button:focus-visible,
 .gg-controls {
   display: flex;
   gap: 12px;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   flex-wrap: wrap;
 }
@@ -681,6 +681,130 @@ button:focus-visible,
 .gg-controls .spacer {
   flex: 1;
   min-width: 8px;
+}
+
+/* Control-group clusters — a labeled rectangle around related buttons so a
+   low-vision player can scan to the right region before hunting for a knob.
+   Adapted from V1 Classic's transport bar / V3 Studio's persistent rack. */
+.gg-ctl-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-ink);
+}
+
+.gg-ctl-group-label {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.gg-ctl-group-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Status rail — persistent "you are here" strip above the stage.
+   Adapted from V1 Classic's breadcrumb + V3 Studio's top info bar. */
+.gg-status-rail {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--bg-alt);
+  box-shadow: var(--shadow-ink);
+  margin-bottom: var(--stage-gap);
+}
+
+.gg-status-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 12px;
+  border-right: 2px solid var(--ink);
+  min-width: 110px;
+}
+
+.gg-status-chip:last-child {
+  border-right: none;
+}
+
+.gg-status-chip .key {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.gg-status-chip .val {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.gg-status-chip.is-active .val {
+  color: var(--accent);
+}
+
+/* Sections jump card — large tap targets, one per song section.
+   Adapted from V1 Classic's "Collections" sidebar. */
+.gg-sections-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gg-sections-nav button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  min-height: 56px;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  background: var(--bg-alt);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.gg-sections-nav button[aria-current='true'] {
+  background: var(--ink);
+  color: var(--bg);
+  box-shadow: none;
+  transform: translate(2px, 2px);
+}
+
+.gg-sections-nav .meta {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  letter-spacing: 0.04em;
+}
+
+.gg-sections-nav button[aria-current='true'] .meta {
+  color: var(--bg);
+  opacity: 0.8;
 }
 
 /* ---- Range/toggle tweaks ---- */
