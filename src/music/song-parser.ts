@@ -1,4 +1,4 @@
-import type { Bar, Section, Song, TabNote, ChordShape, Finger } from './types';
+import type { AudioMode, Bar, Section, Song, TabNote, ChordShape, Finger } from './types';
 import { CHORD_LIB } from './chords';
 
 export interface ParseError {
@@ -13,9 +13,15 @@ export interface ParseResult {
   unknownChords: string[];
 }
 
-const META_RE = /^(title|artist|bpm|time)\s*:\s*(.+)$/i;
+const META_RE = /^(title|artist|bpm|time|audio|audiooffset|audiomode)\s*:\s*(.+)$/i;
 const SECTION_RE = /^\[([^\]]+)\]$/;
 const LYRIC_RE = /^>\s?(.*)$/;
+
+function normalizeAudioMode(value: string): AudioMode {
+  const v = value.trim().toLowerCase();
+  if (v === 'backing' || v === 'teacher') return v;
+  return 'playalong';
+}
 
 /**
  * Parse a lightweight chord-grid song description.
@@ -49,6 +55,9 @@ export function parseChordGrid(text: string): ParseResult {
   let artist = '';
   let bpm = 100;
   let beatsPerBar = 4;
+  let audioUrl: string | null = null;
+  let audioOffsetSec = 0;
+  let audioMode: AudioMode = 'playalong';
 
   const sections: Section[] = [];
   const bars: Bar[] = [];
@@ -76,6 +85,13 @@ export function parseChordGrid(text: string): ParseResult {
       } else if (key === 'time') {
         const m = value.match(/(\d+)\s*\/\s*(\d+)/);
         if (m) beatsPerBar = Number(m[1]);
+      } else if (key === 'audio') {
+        audioUrl = value;
+      } else if (key === 'audiooffset') {
+        const n = Number(value);
+        if (Number.isFinite(n) && n >= 0) audioOffsetSec = n;
+      } else if (key === 'audiomode') {
+        audioMode = normalizeAudioMode(value);
       }
       continue;
     }
@@ -136,6 +152,15 @@ export function parseChordGrid(text: string): ParseResult {
     beatsPerBar,
     sections,
     bars,
+    ...(audioUrl
+      ? {
+          audio: {
+            source: { kind: 'url' as const, url: audioUrl },
+            offsetSec: audioOffsetSec,
+            mode: audioMode,
+          },
+        }
+      : {}),
   };
 
   return { song, errors, unknownChords: [...unknownChords] };
@@ -181,6 +206,15 @@ export function songToChordGrid(song: Song): string {
   if (song.artist) lines.push(`Artist: ${song.artist}`);
   lines.push(`BPM: ${song.bpm}`);
   lines.push(`Time: ${song.beatsPerBar}/4`);
+  if (song.audio && song.audio.source.kind === 'url') {
+    lines.push(`Audio: ${song.audio.source.url}`);
+    if (song.audio.offsetSec > 0) {
+      lines.push(`AudioOffset: ${song.audio.offsetSec}`);
+    }
+    if (song.audio.mode !== 'playalong') {
+      lines.push(`AudioMode: ${song.audio.mode}`);
+    }
+  }
   lines.push('');
   for (const section of song.sections) {
     lines.push(`[${section.name}]`);
