@@ -747,19 +747,31 @@ export function App() {
         </div>
       )}
       <header className="gg-topbar" role="banner">
-        <div>
-          <div className="gg-title-sub">
-            Guitar Guru
+        <div className="gg-topbar-main">
+          <div className="gg-brand">
+            <div className="gg-brand-mark" aria-hidden="true">G</div>
+            <div className="gg-brand-name">Guitar Guru</div>
             {typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches && (
-              <span style={{ marginLeft: 8, fontSize: 10, padding: '2px 8px', background: 'var(--accent-blue)', color: '#fff', borderRadius: 999, letterSpacing: '0.12em' }}>
-                INSTALLED
-              </span>
+              <span className="gg-brand-pill">INSTALLED</span>
             )}
           </div>
-          <h1>{song.title}</h1>
-          <div style={{ color: 'var(--ink-mute)', fontWeight: 700, fontSize: 14, marginTop: 2 }}>
-            {song.artist}
-          </div>
+          <nav className="gg-breadcrumb" aria-label="Location">
+            <span className="gg-crumb gg-crumb-mute">Song</span>
+            <span className="gg-crumb-sep" aria-hidden="true">›</span>
+            <span className="gg-crumb gg-crumb-strong" title={song.title}>{song.title}</span>
+            {song.artist && (
+              <>
+                <span className="gg-crumb-sep" aria-hidden="true">·</span>
+                <span className="gg-crumb gg-crumb-mute">{song.artist}</span>
+              </>
+            )}
+            {currentSection?.name && (
+              <>
+                <span className="gg-crumb-sep" aria-hidden="true">›</span>
+                <span className="gg-crumb gg-crumb-strong">{currentSection.name}</span>
+              </>
+            )}
+          </nav>
         </div>
         <ModeSwitch mode={mode} onChange={(m) => { setMode(m); announce(m === 'rhythm' ? 'Rhythm mode' : 'Lead GODMODE'); }} />
       </header>

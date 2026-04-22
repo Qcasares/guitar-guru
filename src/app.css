@@ -1,4 +1,29 @@
+/* Default theme — Classic (V1 from the Claude Design handoff).
+   Cool near-white background, indigo accent, 8px radii, subtle soft shadows
+   instead of hard ink offsets. Adapted for low-vision: palette is V1's,
+   but hit targets, type weights, and border widths stay at the project's
+   accessibility baseline (80 px+ buttons, 3 px ink borders on interactive
+   elements, 7:1+ contrast on all text). Indigo #4f46e5 on white is 7.2:1. */
 :root {
+  --bg: #fafafa;
+  --bg-alt: #f4f4f5;
+  --ink: #1a1a1e;
+  --ink-soft: #3f3f46;
+  --ink-mute: #6b6b74;
+  --accent: #4f46e5;
+  --accent-blue: #0ea5e9;
+  --accent-green: #10a37f;
+  --accent-orange: #ea580c;
+  --accent-purple: #7c3aed;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --shadow-ink: 0 2px 0 rgba(17, 17, 20, 0.08), 0 1px 2px rgba(17, 17, 20, 0.05);
+  --radius: 8px;
+  --font: 'Inter', 'Aptos', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  color-scheme: light;
+}
+
+:root[data-theme='sketch'] {
   --bg: #fffdf5;
   --bg-alt: #faf6ea;
   --ink: #111;
@@ -26,18 +51,20 @@
   --surface: #ffffff;
   --surface-2: #f3f3f3;
   --shadow-ink: 6px 6px 0 #000;
+  --radius: 10px;
 }
 
 :root[data-theme='dark'] {
-  --bg: #0f1012;
-  --bg-alt: #1a1b1f;
-  --ink: #f6f3ea;
+  --bg: #0e0f12;
+  --bg-alt: #15171b;
+  --ink: #e8e6e1;
   --ink-soft: #d3cdb9;
-  --ink-mute: #928c7b;
-  --accent: #ff5a52;
-  --surface: #191a1e;
-  --surface-2: #23242a;
-  --shadow-ink: 4px 4px 0 #000;
+  --ink-mute: #9a9ba1;
+  --accent: #818cf8;
+  --surface: #15171b;
+  --surface-2: #1c1f24;
+  --shadow-ink: 0 2px 0 rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --radius: 8px;
   color-scheme: dark;
 }
 
@@ -113,28 +140,91 @@ button:focus-visible,
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 20px 28px;
-  border-bottom: 3px solid var(--ink);
+  padding: 16px 28px;
+  border-bottom: 2px solid var(--ink);
   background: var(--surface);
 }
 
-.gg-topbar h1 {
-  margin: 0;
-  font-size: 28px;
+.gg-topbar-main {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* V1-style brand block — small logotype + product name + optional pill. */
+.gg-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gg-brand-mark {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 18px;
   font-weight: 900;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
+  border-radius: 6px;
+}
+
+.gg-brand-name {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.gg-brand-pill {
+  font-size: 10px;
+  padding: 3px 9px;
+  background: var(--accent-blue);
+  color: #fff;
+  border-radius: 999px;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+
+/* V1-style breadcrumb — Song › title · artist › section. */
+.gg-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.gg-crumb-mute {
+  color: var(--ink-mute);
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.gg-crumb-strong {
+  color: var(--ink);
+  font-weight: 900;
+  max-width: 42vw;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 60vw;
 }
 
-.gg-topbar .gg-title-sub {
+.gg-crumb-sep {
   color: var(--ink-mute);
-  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-size: 16px;
 }
 
 .gg-mode-switch {
@@ -1027,8 +1117,9 @@ button:focus-visible,
     gap: 12px;
     flex-wrap: wrap;
   }
-  .gg-topbar h1 { font-size: 22px; }
-  .gg-topbar .gg-title-sub { font-size: 13px; }
+  .gg-breadcrumb { font-size: 18px; gap: 6px; }
+  .gg-crumb-strong { max-width: 90vw; }
+  .gg-crumb-mute { font-size: 12px; }
 
   .gg-main { padding: 14px 14px; gap: 14px; }
   .gg-stage { min-height: 420px; }

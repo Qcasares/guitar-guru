@@ -16,6 +16,7 @@ interface TweaksPanelProps {
 }
 
 const THEMES: { id: Theme; label: string }[] = [
+  { id: 'classic', label: 'Classic' },
   { id: 'sketch', label: 'Sketch' },
   { id: 'high-contrast', label: 'High-contrast' },
   { id: 'dark', label: 'Dark' },

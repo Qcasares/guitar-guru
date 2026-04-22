@@ -78,6 +78,6 @@ export interface Song {
 
 export type PlaybackMode = 'rhythm' | 'lead';
 
-export type Theme = 'sketch' | 'high-contrast' | 'dark';
+export type Theme = 'classic' | 'sketch' | 'high-contrast' | 'dark';
 
 export type Density = 'compact' | 'normal' | 'spacious';

@@ -31,7 +31,7 @@ export interface Preferences {
 
 export const DEFAULT_PREFS: Preferences = {
   mode: 'rhythm',
-  theme: 'sketch',
+  theme: 'classic',
   density: 'normal',
   chordSize: 'xl',
   showLyrics: true,
