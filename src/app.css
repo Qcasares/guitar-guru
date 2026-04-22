@@ -1,25 +1,32 @@
-/* Default theme — Classic (V1 from the Claude Design handoff).
-   Cool near-white background, indigo accent, 8px radii, subtle soft shadows
-   instead of hard ink offsets. Adapted for low-vision: palette is V1's,
-   but hit targets, type weights, and border widths stay at the project's
-   accessibility baseline (80 px+ buttons, 3 px ink borders on interactive
-   elements, 7:1+ contrast on all text). Indigo #4f46e5 on white is 7.2:1. */
+/* Default theme — Classic. Adopted from V1 Classic in the Claude Design
+   handoff but reworked after frontend-design feedback flagged the literal
+   V1 palette (Inter on white + indigo) as generic SaaS. The palette now
+   leans vintage-concert-program — warm oyster paper, deep forest ink, a
+   saturated ember accent — paired with Aptos (typography preference) and
+   tabular numerics for the instrument-panel feel. Contrast budget:
+   ember #a13e1e on #f0ebe1 ≈ 6.8:1 (AA 4.5:1 ✓, AAA 7:1 borderline — used
+   only for icon/accent chrome, never body text; body text is ink on paper
+   at 13.5:1). The ember tone is deliberately distinct from finger-color
+   red (#e53935) and orange (#fb8c00). */
 :root {
-  --bg: #fafafa;
-  --bg-alt: #f4f4f5;
-  --ink: #1a1a1e;
-  --ink-soft: #3f3f46;
-  --ink-mute: #6b6b74;
-  --accent: #4f46e5;
-  --accent-blue: #0ea5e9;
-  --accent-green: #10a37f;
-  --accent-orange: #ea580c;
-  --accent-purple: #7c3aed;
-  --surface: #ffffff;
-  --surface-2: #f4f4f5;
-  --shadow-ink: 0 2px 0 rgba(17, 17, 20, 0.08), 0 1px 2px rgba(17, 17, 20, 0.05);
-  --radius: 8px;
-  --font: 'Inter', 'Aptos', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --bg: #f0ebe1;
+  --bg-alt: #e7e1d3;
+  --ink: #1a2b1f;
+  --ink-soft: #3a4e41;
+  --ink-mute: #6b7862;
+  --accent: #a13e1e;
+  --accent-blue: #1e4a7a;
+  --accent-green: #2d6b3e;
+  --accent-orange: #c2410c;
+  --accent-purple: #6b21a8;
+  --surface: #fbf8f1;
+  --surface-2: #ece4d3;
+  --shadow-ink:
+    0 0 0 1px rgba(26, 43, 31, 0.06),
+    0 2px 0 rgba(26, 43, 31, 0.06),
+    0 10px 24px -12px rgba(26, 43, 31, 0.25);
+  --radius: 4px;
+  --font: 'Aptos', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
   color-scheme: light;
 }
 
@@ -100,6 +107,48 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior: none;
+  /* Subtle paper grain — SVG fractal noise layered over the theme bg.
+     Low opacity (0.035) so it gives depth without hurting legibility.
+     Suppressed on sketch theme (which already owns its own visual
+     language) and on high-contrast theme (AAA + texture don't mix). */
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.17 0 0 0 0 0.12 0 0 0 0.95 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-attachment: fixed;
+}
+
+:root[data-theme='sketch'] html,
+:root[data-theme='sketch'] body,
+:root[data-theme='sketch'] #root,
+:root[data-theme='high-contrast'] html,
+:root[data-theme='high-contrast'] body,
+:root[data-theme='high-contrast'] #root {
+  background-image: none;
+}
+
+/* Editorial ornaments (thin ink hairlines on card / ctl-group / status-rail
+   tops) are a Classic-theme signature. Suppress in Sketch (owns the hard
+   ink-shadow aesthetic) and High-contrast (no decoration allowed). */
+:root[data-theme='sketch'] .gg-card::before,
+:root[data-theme='sketch'] .gg-ctl-group::before,
+:root[data-theme='sketch'] .gg-status-rail::before,
+:root[data-theme='high-contrast'] .gg-card::before,
+:root[data-theme='high-contrast'] .gg-ctl-group::before,
+:root[data-theme='high-contrast'] .gg-status-rail::before {
+  display: none;
+}
+
+/* Section lozenge in the breadcrumb is also Classic-specific — Sketch
+   keeps the straight text crumb treatment. */
+:root[data-theme='sketch'] .gg-breadcrumb > .gg-crumb-strong + .gg-crumb-sep + .gg-crumb-strong,
+:root[data-theme='high-contrast'] .gg-breadcrumb > .gg-crumb-strong + .gg-crumb-sep + .gg-crumb-strong {
+  padding: 0;
+  font-size: 26px;
+  border: none;
+  color: var(--ink);
+  border-radius: 0;
+  letter-spacing: -0.02em;
+  text-transform: none;
 }
 
 button {
@@ -130,54 +179,72 @@ button:focus-visible,
   display: grid;
   grid-template-rows: auto 1fr auto;
   background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(161, 62, 30, 0.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(45, 107, 62, 0.08), transparent 60%),
+    var(--bg);
+}
+
+/* Sketch theme keeps its original red/blue washes for brand continuity. */
+:root[data-theme='sketch'] .gg-app {
+  background:
     radial-gradient(1200px 600px at 10% -10%, rgba(229, 57, 53, 0.08), transparent 60%),
     radial-gradient(900px 500px at 100% 0%, rgba(30, 136, 229, 0.07), transparent 60%),
     var(--bg);
 }
 
+/* Topbar — vintage concert-program header. Thick ink rule on top + paper
+   underneath + thin double-stroke rule underneath for editorial punctuation. */
 .gg-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 16px 28px;
-  border-bottom: 2px solid var(--ink);
+  padding: 18px 28px 16px;
   background: var(--surface);
+  border-bottom: 1px solid var(--ink);
+  box-shadow: 0 2px 0 var(--bg), 0 3px 0 var(--ink);
+  position: relative;
 }
 
 .gg-topbar-main {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
   flex-wrap: wrap;
   min-width: 0;
 }
 
-/* V1-style brand block — small logotype + product name + optional pill. */
+/* Brand — ink-filled roundel with a dropped serif G initial for character.
+   Tabular weight contrast between the initial and the product name. */
 .gg-brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .gg-brand-mark {
   display: inline-flex;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
-  background: var(--accent);
-  color: #fff;
-  font-size: 18px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 22px;
   font-weight: 900;
-  letter-spacing: -0.04em;
-  border-radius: 6px;
+  letter-spacing: -0.06em;
+  font-feature-settings: 'ss01';
+  border-radius: 50%;
+  position: relative;
+  top: 4px;
+  box-shadow: 0 0 0 4px var(--surface), 0 0 0 5px var(--ink);
 }
 
 .gg-brand-name {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   color: var(--ink);
 }
 
@@ -186,45 +253,62 @@ button:focus-visible,
   padding: 3px 9px;
   background: var(--accent-blue);
   color: #fff;
-  border-radius: 999px;
-  letter-spacing: 0.12em;
-  font-weight: 800;
+  border-radius: 2px;
+  letter-spacing: 0.18em;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
-/* V1-style breadcrumb — Song › title · artist › section. */
+/* Breadcrumb — Song › title · artist › section. Section name lives inside
+   a thin ink-outlined lozenge so the currently-loaded location reads as
+   "stamped" onto the paper — an editorial annotation, not another label. */
 .gg-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   min-width: 0;
-  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.01em;
   line-height: 1.15;
 }
 
 .gg-crumb-mute {
   color: var(--ink-mute);
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 800;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.24em;
 }
 
 .gg-crumb-strong {
   color: var(--ink);
   font-weight: 900;
-  max-width: 42vw;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  max-width: 40vw;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.gg-breadcrumb > .gg-crumb-strong + .gg-crumb-sep + .gg-crumb-strong {
+  /* Last .gg-crumb-strong in the chain is the section — render it as a
+     bordered lozenge in accent color so the player's current location
+     reads like a rubber-stamp annotation on a concert program. */
+  padding: 4px 12px;
+  font-size: 18px;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .gg-crumb-sep {
   color: var(--ink-mute);
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: 400;
+  font-size: 18px;
+  opacity: 0.5;
 }
 
 .gg-mode-switch {
@@ -491,17 +575,30 @@ button:focus-visible,
 }
 
 .gg-card {
-  border: 3px solid var(--ink);
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-ink);
-  padding: 18px 20px;
+  padding: 18px 20px 20px;
+  position: relative;
+}
+
+.gg-card::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  height: 1px;
+  background: var(--ink);
+  opacity: 0.14;
 }
 
 .gg-card h3 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  letter-spacing: 0.12em;
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--ink-mute);
 }
@@ -773,26 +870,39 @@ button:focus-visible,
   min-width: 8px;
 }
 
-/* Control-group clusters — a labeled rectangle around related buttons so a
-   low-vision player can scan to the right region before hunting for a knob.
-   Adapted from V1 Classic's transport bar / V3 Studio's persistent rack. */
+/* Control-group clusters — labeled region around related buttons, styled
+   like the labeled sub-rails on an analog mixing console: faint ink rule
+   across the top, label printed in wide-tracked caps on top of the rule. */
 .gg-ctl-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 14px 12px 10px;
   border: 2px solid var(--ink);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow-ink);
+  position: relative;
+}
+
+.gg-ctl-group::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  height: 1px;
+  background: var(--ink);
+  opacity: 0.14;
 }
 
 .gg-ctl-group-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--ink-mute);
+  padding-left: 4px;
 }
 
 .gg-ctl-group-row {
@@ -802,28 +912,42 @@ button:focus-visible,
   flex-wrap: wrap;
 }
 
-/* Status rail — persistent "you are here" strip above the stage.
-   Adapted from V1 Classic's breadcrumb + V3 Studio's top info bar. */
+/* Status rail — instrument-panel strip above the stage. Ink-filled in a
+   warm surface, with 1px hairlines between chips (not thick borders) so
+   the rail reads as one continuous readout instead of a row of cards.
+   Tabular numerics so bar-counter and BPM don't wiggle when they tick. */
 .gg-status-rail {
   display: flex;
-  gap: 10px;
+  gap: 0;
   align-items: stretch;
   flex-wrap: wrap;
-  padding: 10px 14px;
-  border: 3px solid var(--ink);
+  padding: 14px 4px;
+  border: 2px solid var(--ink);
   border-radius: var(--radius);
-  background: var(--bg-alt);
+  background: var(--surface);
   box-shadow: var(--shadow-ink);
   margin-bottom: var(--stage-gap);
+  position: relative;
+  overflow: hidden;
+}
+
+.gg-status-rail::before {
+  content: '';
+  position: absolute;
+  inset: 4px 4px auto 4px;
+  height: 2px;
+  background: var(--ink);
+  opacity: 0.08;
 }
 
 .gg-status-chip {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 6px 12px;
-  border-right: 2px solid var(--ink);
-  min-width: 110px;
+  gap: 4px;
+  padding: 4px 20px;
+  border-right: 1px solid currentColor;
+  min-width: 120px;
+  color: var(--ink);
 }
 
 .gg-status-chip:last-child {
@@ -833,17 +957,22 @@ button:focus-visible,
 .gg-status-chip .key {
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--ink-mute);
 }
 
 .gg-status-chip .val {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 900;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  line-height: 1.15;
+  letter-spacing: -0.035em;
+  color: inherit;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.gg-status-chip.is-active {
+  color: var(--accent);
 }
 
 .gg-status-chip.is-active .val {
