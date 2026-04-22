@@ -49,6 +49,23 @@ export interface Section {
   lyrics?: string[];
 }
 
+export type AudioSource =
+  | { kind: 'blob'; blobId: string }
+  | { kind: 'url'; url: string };
+
+export type AudioMode = 'playalong' | 'backing' | 'teacher';
+
+export interface AudioTrackRef {
+  source: AudioSource;
+  /** Audio-timeline seconds that correspond to beat 1 of the song. */
+  offsetSec: number;
+  mode: AudioMode;
+  /** Cached from `loadedmetadata`, used for the sidepanel readout. */
+  durationSec?: number;
+  /** Display only — original filename for blob sources. */
+  filename?: string;
+}
+
 export interface Song {
   title: string;
   artist: string;
@@ -56,6 +73,7 @@ export interface Song {
   beatsPerBar: number;
   bars: Bar[];
   sections: Section[];
+  audio?: AudioTrackRef;
 }
 
 export type PlaybackMode = 'rhythm' | 'lead';
