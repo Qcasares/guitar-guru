@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Song } from '../music/types';
+import type { AudioMode, AudioTrackRef, Song } from '../music/types';
 import { parseChordGrid, songToChordGrid } from '../music/song-parser';
 import { SONG_LIBRARY } from '../music/song-library';
+import { detectBeatOneFromArrayBuffer } from '../audio/audio-track';
+import { deleteBlob, putBlob } from '../lib/audio-storage';
 
 interface SongImportDialogProps {
   currentSong: Song;
@@ -28,8 +30,66 @@ G  D  Em  C
 export function SongImportDialog({ currentSong, onApply, onReset, onClose }: SongImportDialogProps) {
   const [tab, setTab] = useState<Tab>('library');
   const [text, setText] = useState(() => songToChordGrid(currentSong));
+  const [audio, setAudio] = useState<AudioTrackRef | undefined>(currentSong.audio);
+  const [audioBusy, setAudioBusy] = useState<string | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   const parse = useMemo(() => parseChordGrid(text), [text]);
+
+  const onFilePicked = async (file: File) => {
+    setAudioError(null);
+    setAudioBusy('Decoding…');
+    try {
+      const buf = await file.arrayBuffer();
+      const offsetSec = await detectBeatOneFromArrayBuffer(buf);
+      const blobId = crypto.randomUUID();
+      await putBlob(blobId, new Blob([buf], { type: file.type || 'audio/mpeg' }));
+      const prev = audio;
+      setAudio({
+        source: { kind: 'blob', blobId },
+        offsetSec,
+        mode: audio?.mode ?? 'playalong',
+        filename: file.name,
+      });
+      if (prev && prev.source.kind === 'blob') {
+        await deleteBlob(prev.source.blobId);
+      }
+    } catch (err) {
+      setAudioError(err instanceof Error ? err.message : 'Could not decode file');
+    } finally {
+      setAudioBusy(null);
+    }
+  };
+
+  const onUrlChanged = (url: string) => {
+    setAudio((prev) => {
+      if (!url.trim()) return undefined;
+      return {
+        source: { kind: 'url', url: url.trim() },
+        offsetSec: prev?.offsetSec ?? 0,
+        mode: prev?.mode ?? 'playalong',
+      };
+    });
+  };
+
+  const onModeChanged = (mode: AudioMode) => {
+    setAudio((prev) => (prev ? { ...prev, mode } : prev));
+  };
+
+  const onOffsetChanged = (value: string) => {
+    const n = Number(value);
+    if (Number.isFinite(n) && n >= 0) {
+      setAudio((prev) => (prev ? { ...prev, offsetSec: n } : prev));
+    }
+  };
+
+  const onClearAudio = async () => {
+    const prev = audio;
+    setAudio(undefined);
+    if (prev && prev.source.kind === 'blob') {
+      await deleteBlob(prev.source.blobId);
+    }
+  };
 
   const loadFromLibrary = (id: string) => {
     const entry = SONG_LIBRARY.find((s) => s.id === id);
@@ -160,6 +220,79 @@ export function SongImportDialog({ currentSong, onApply, onReset, onClose }: Son
             }}
           />
 
+          <fieldset style={{ border: '2px dashed var(--ink)', borderRadius: 8, padding: 14, background: 'var(--bg-alt)', margin: 0 }}>
+            <legend style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.14em', fontWeight: 800, color: 'var(--ink-mute)', padding: '0 6px' }}>
+              🎵 Audio track (optional)
+            </legend>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label style={{ fontSize: 13, fontWeight: 700 }}>
+                Attach audio file
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void onFilePicked(f);
+                  }}
+                  style={{ display: 'block', marginTop: 4 }}
+                />
+              </label>
+              <label style={{ fontSize: 13, fontWeight: 700 }}>
+                …or paste an audio URL
+                <input
+                  type="url"
+                  value={audio?.source.kind === 'url' ? audio.source.url : ''}
+                  onChange={(e) => onUrlChanged(e.target.value)}
+                  placeholder="https://example.com/song.mp3"
+                  style={{ display: 'block', marginTop: 4, width: '100%', padding: 8, border: '2px solid var(--ink)', borderRadius: 6, background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'inherit' }}
+                />
+              </label>
+              {audio && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label style={{ fontSize: 13, fontWeight: 700 }}>
+                    Mode
+                    <select
+                      value={audio.mode}
+                      onChange={(e) => onModeChanged(e.target.value as AudioMode)}
+                      style={{ display: 'block', marginTop: 4, width: '100%', padding: 8, border: '2px solid var(--ink)', borderRadius: 6, background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'inherit' }}>
+                      <option value="playalong">Play-along (strum over original)</option>
+                      <option value="backing">Backing track (no guitar)</option>
+                      <option value="teacher">Teacher (reference only)</option>
+                    </select>
+                  </label>
+                  <label style={{ fontSize: 13, fontWeight: 700 }}>
+                    Beat 1 at (sec)
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={audio.offsetSec}
+                      onChange={(e) => onOffsetChanged(e.target.value)}
+                      style={{ display: 'block', marginTop: 4, width: '100%', padding: 8, border: '2px solid var(--ink)', borderRadius: 6, background: 'var(--surface)', color: 'var(--ink)', fontFamily: 'inherit' }}
+                    />
+                  </label>
+                </div>
+              )}
+              {audio && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 13, color: 'var(--ink-mute)' }}>
+                  <span>
+                    {audio.source.kind === 'blob'
+                      ? `Local: ${audio.filename ?? 'attached file'}`
+                      : `URL: ${audio.source.url.slice(0, 48)}${audio.source.url.length > 48 ? '…' : ''}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void onClearAudio()}
+                    style={{ marginLeft: 'auto', padding: '6px 10px', fontWeight: 800, background: 'var(--surface)', color: 'var(--ink)', border: '2px solid var(--ink)', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    ✕ Remove
+                  </button>
+                </div>
+              )}
+              {audioBusy && <div style={{ fontSize: 13, color: 'var(--ink-mute)' }}>{audioBusy}</div>}
+              {audioError && <div style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>{audioError}</div>}
+            </div>
+          </fieldset>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ padding: 12, border: '2px dashed var(--ink)', borderRadius: 8, background: 'var(--bg-alt)' }}>
               <div style={{ fontSize: 12, textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.14em', color: 'var(--ink-mute)', marginBottom: 6 }}>
@@ -220,7 +353,11 @@ export function SongImportDialog({ currentSong, onApply, onReset, onClose }: Son
                 Cancel
               </button>
               <button
-                onClick={() => parse.song && onApply(parse.song)}
+                onClick={() => {
+                  if (!parse.song) return;
+                  const next: Song = { ...parse.song, audio };
+                  onApply(next);
+                }}
                 disabled={!canApply}
                 style={{
                   padding: '14px 22px', fontSize: 16, fontWeight: 900,
