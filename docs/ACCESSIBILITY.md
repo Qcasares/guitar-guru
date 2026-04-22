@@ -21,7 +21,7 @@ Guitar Guru is designed for **low-vision and blind players**. Accessibility is t
 
 ## Key features that support access
 
-- **Three input modalities** — keyboard shortcuts (`Space · ← → · R · M · Z · I · L · V · ? · T · G · D · F · [ ] · \`), voice commands (Web Speech Recognition, 20+ verbs), on-screen touch (80 px minimum targets).
+- **Three input modalities** — keyboard shortcuts (`Space · ← → · R · M · Z · I · L · V · ? · T · G · D · F · [ ] · \ · A`), voice commands (Web Speech Recognition, 20+ verbs), on-screen touch (80 px minimum targets).
 - **Three output modalities** — visual (high-contrast themes, XXL chord size, pattern+colour finger encoding, focus spotlight), audio (metronome, Web Audio strum/pluck synth, SpeechSynthesis voice announcer, audio status ping, finger-pitch sonification, chord-diagram narration), haptic (Vibration API beat pulses on mobile).
 - **Deterministic transport** — predictable 60 ms-accurate metronome, count-in before play, pause on any modal open.
 - **Themes** — Sketch (default cream), High-contrast (pure black/white, 21:1), Dark.

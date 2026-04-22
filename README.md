@@ -50,7 +50,7 @@ still works).
 - **Haptic beat pulse** — Vibration API, tick / downbeat / triple-buzz at
   section boundaries
 - Keyboard shortcuts: `Space · ← → · R · M · Z · I · L · V · ? · T · G · D · F
-  · [ ] · \`
+  · [ ] · \ · A`
 
 ### Content
 - **Chord library** — 12 shapes (C · D · Dm · D7 · E · Em · F · G · G7 · A ·
@@ -59,6 +59,11 @@ still works).
   I-V-vi-IV, House of the Rising Sun, Knockin' on progression, Amazing Grace,
   Canon progression)
 - **Custom song import** — paste a chord grid, live preview + validation
+- **Recorded audio tracks** — attach a local file (IndexedDB-persisted) or
+  URL to any song. Pick *play-along* (user strums over original),
+  *backing* (no-guitar mix), or *teacher* (reference only). Pitch-preserving
+  tempo stretch at ½× / ¾×; auto-detected beat 1 via onset envelope; toggle
+  with `A`.
 - **Finger close-up** (`Z`) — full-stage modal with giant fingertip callouts
   and per-finger instructions
 - **Practice trainers** — chord-changes-per-minute (Justin Guitar-style) and
@@ -87,7 +92,8 @@ Full conformance statement: [`docs/ACCESSIBILITY.md`](./docs/ACCESSIBILITY.md).
 | Rhythm view (Now/Next) | `src/views/RhythmView.tsx` |
 | Lead GODMODE view (tab staff + fretboard + playhead) | `src/views/LeadGodmodeView.tsx` |
 | Beat clock | `src/audio/transport.ts` |
-| Metronome / synth / voice / narration / sonification / haptics | `src/audio/*.ts` |
+| Metronome / synth / voice / narration / sonification / haptics / audio track | `src/audio/*.ts` |
+| Audio blob persistence (IndexedDB) | `src/lib/audio-storage.ts` |
 | Mic pipeline + onset + chord detection | `src/audio/audio-input.ts`, `onset-detect.ts`, `chord-detect.ts` |
 | Voice commands | `src/voice/recognition.ts`, `src/voice/parser.ts` |
 | Chord box / tab staff / fretboard / close-up / spotlight | `src/components/*.tsx` |
