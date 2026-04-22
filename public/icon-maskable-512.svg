@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Guitar Guru">
+  <title>Guitar Guru</title>
+  <!--
+    Maskable icon: mark sits inside a ~10% safe zone so Android mask shapes
+    (circle, squircle, rounded square) never clip the glyph.
+    Safe zone ≈ 410px centered square; mark fits within.
+  -->
+  <rect width="512" height="512" fill="#fffdf5"/>
+  <!-- red dot slightly smaller than non-maskable variant to respect safe zone -->
+  <circle cx="256" cy="256" r="150" fill="#e53935"/>
+  <!-- bold G sized to remain inside the safe zone -->
+  <text
+    x="256"
+    y="256"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="Helvetica, Arial, 'Aptos', sans-serif"
+    font-weight="900"
+    font-size="280"
+    fill="#111111">G</text>
+</svg>

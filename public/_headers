@@ -1,0 +1,32 @@
+# Cloudflare Pages / Netlify headers file. Vite copies /public verbatim
+# into /dist so these ship as-is.
+
+# Hashed assets — immutable, cache forever (Vite emits content-hashed names)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML shell — never cache; always revalidate so users pick up new bundles
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Service worker — MUST NOT be cached by the browser, else updates stall
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+  Service-Worker-Allowed: /
+
+# Manifest — force the correct MIME type (Cloudflare sometimes serves
+# application/octet-stream for .webmanifest, which blocks installability)
+/manifest.webmanifest
+  Content-Type: application/manifest+json
+  Cache-Control: public, max-age=3600
+
+# Security headers — safe for a same-origin mic / Web Audio PWA.
+# (Intentionally NOT setting COEP / COOP — those break third-party embeds
+# and aren't needed unless we want SharedArrayBuffer, which we don't.)
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: microphone=(self), camera=(), geolocation=()
+  X-Frame-Options: DENY

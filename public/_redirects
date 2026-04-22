@@ -1,0 +1,4 @@
+# SPA fallback — if a future client-side router adds routes like /song/wonderwall,
+# this rewrites any unknown path to index.html with a 200 (not 302) so refreshes
+# and direct links don't 404. Harmless for the current single-route app.
+/*    /index.html   200

@@ -1,0 +1,146 @@
+import type { ChordShape } from './types';
+
+export const CHORD_LIB: Record<string, ChordShape> = {
+  G: {
+    name: 'G',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 3, finger: 2 },
+      { string: 5, fret: 2, finger: 1 },
+      { string: 4, fret: 0, open: true },
+      { string: 3, fret: 0, open: true },
+      { string: 2, fret: 0, open: true },
+      { string: 1, fret: 3, finger: 3 },
+    ],
+  },
+  C: {
+    name: 'C',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 0, muted: true },
+      { string: 5, fret: 3, finger: 3 },
+      { string: 4, fret: 2, finger: 2 },
+      { string: 3, fret: 0, open: true },
+      { string: 2, fret: 1, finger: 1 },
+      { string: 1, fret: 0, open: true },
+    ],
+  },
+  D: {
+    name: 'D',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 0, muted: true },
+      { string: 5, fret: 0, muted: true },
+      { string: 4, fret: 0, open: true },
+      { string: 3, fret: 2, finger: 1 },
+      { string: 2, fret: 3, finger: 3 },
+      { string: 1, fret: 2, finger: 2 },
+    ],
+  },
+  Em: {
+    name: 'Em',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 0, open: true },
+      { string: 5, fret: 2, finger: 2 },
+      { string: 4, fret: 2, finger: 3 },
+      { string: 3, fret: 0, open: true },
+      { string: 2, fret: 0, open: true },
+      { string: 1, fret: 0, open: true },
+    ],
+  },
+  Am: {
+    name: 'Am',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 0, muted: true },
+      { string: 5, fret: 0, open: true },
+      { string: 4, fret: 2, finger: 2 },
+      { string: 3, fret: 2, finger: 3 },
+      { string: 2, fret: 1, finger: 1 },
+      { string: 1, fret: 0, open: true },
+    ],
+  },
+  A: {
+    name: 'A',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 0, muted: true },
+      { string: 5, fret: 0, open: true },
+      { string: 4, fret: 2, finger: 1 },
+      { string: 3, fret: 2, finger: 2 },
+      { string: 2, fret: 2, finger: 3 },
+      { string: 1, fret: 0, open: true },
+    ],
+  },
+  F: {
+    name: 'F',
+    frets: 4,
+    startFret: 1,
+    notes: [
+      { string: 4, fret: 3, finger: 4 },
+      { string: 3, fret: 2, finger: 3 },
+      { string: 2, fret: 1, finger: 2 },
+    ],
+    barres: [{ fromString: 6, toString: 1, fret: 1, finger: 1 }],
+  },
+  E: {
+    name: 'E',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 0, open: true },
+      { string: 5, fret: 2, finger: 2 },
+      { string: 4, fret: 2, finger: 3 },
+      { string: 3, fret: 1, finger: 1 },
+      { string: 2, fret: 0, open: true },
+      { string: 1, fret: 0, open: true },
+    ],
+  },
+  Dm: {
+    name: 'Dm',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 0, muted: true },
+      { string: 5, fret: 0, muted: true },
+      { string: 4, fret: 0, open: true },
+      { string: 3, fret: 2, finger: 2 },
+      { string: 2, fret: 3, finger: 3 },
+      { string: 1, fret: 1, finger: 1 },
+    ],
+  },
+  Bm: {
+    name: 'Bm',
+    frets: 4,
+    startFret: 2,
+    notes: [
+      { string: 4, fret: 4, finger: 3 },
+      { string: 3, fret: 4, finger: 4 },
+      { string: 2, fret: 3, finger: 2 },
+    ],
+    barres: [{ fromString: 5, toString: 1, fret: 2, finger: 1 }],
+  },
+  D7: {
+    name: 'D7',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 0, muted: true },
+      { string: 5, fret: 0, muted: true },
+      { string: 4, fret: 0, open: true },
+      { string: 3, fret: 2, finger: 2 },
+      { string: 2, fret: 1, finger: 1 },
+      { string: 1, fret: 2, finger: 3 },
+    ],
+  },
+  G7: {
+    name: 'G7',
+    frets: 4,
+    notes: [
+      { string: 6, fret: 3, finger: 3 },
+      { string: 5, fret: 2, finger: 2 },
+      { string: 4, fret: 0, open: true },
+      { string: 3, fret: 0, open: true },
+      { string: 2, fret: 0, open: true },
+      { string: 1, fret: 1, finger: 1 },
+    ],
+  },
+};

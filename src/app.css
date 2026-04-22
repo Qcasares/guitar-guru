@@ -1,0 +1,983 @@
+:root {
+  --bg: #fffdf5;
+  --bg-alt: #faf6ea;
+  --ink: #111;
+  --ink-soft: #4a4a4a;
+  --ink-mute: #777;
+  --accent: #e53935;
+  --accent-blue: #1e88e5;
+  --accent-green: #43a047;
+  --accent-orange: #fb8c00;
+  --accent-purple: #8e24aa;
+  --surface: #ffffff;
+  --surface-2: #f7f2e8;
+  --shadow-ink: 4px 4px 0 var(--ink);
+  --radius: 10px;
+  --font: 'Aptos', 'Helvetica Neue', Helvetica, Arial, 'Inter', system-ui, sans-serif;
+  color-scheme: light;
+}
+
+:root[data-theme='high-contrast'] {
+  --bg: #ffffff;
+  --bg-alt: #f0f0f0;
+  --ink: #000000;
+  --ink-soft: #000000;
+  --ink-mute: #333333;
+  --surface: #ffffff;
+  --surface-2: #f3f3f3;
+  --shadow-ink: 6px 6px 0 #000;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f1012;
+  --bg-alt: #1a1b1f;
+  --ink: #f6f3ea;
+  --ink-soft: #d3cdb9;
+  --ink-mute: #928c7b;
+  --accent: #ff5a52;
+  --surface: #191a1e;
+  --surface-2: #23242a;
+  --shadow-ink: 4px 4px 0 #000;
+  color-scheme: dark;
+}
+
+:root {
+  --stage-pad: 28px;
+  --stage-gap: 18px;
+  --card-pad: 18px;
+}
+
+:root[data-density='compact'] {
+  --stage-pad: 16px;
+  --stage-gap: 10px;
+  --card-pad: 12px;
+}
+
+:root[data-density='spacious'] {
+  --stage-pad: 40px;
+  --stage-gap: 28px;
+  --card-pad: 24px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+button:focus-visible,
+[role='button']:focus-visible,
+[tabindex]:focus-visible {
+  outline: 4px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.gg-app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(229, 57, 53, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(30, 136, 229, 0.07), transparent 60%),
+    var(--bg);
+}
+
+.gg-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 28px;
+  border-bottom: 3px solid var(--ink);
+  background: var(--surface);
+}
+
+.gg-topbar h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60vw;
+}
+
+.gg-topbar .gg-title-sub {
+  color: var(--ink-mute);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.gg-mode-switch {
+  display: inline-flex;
+  padding: 6px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-ink);
+}
+
+.gg-mode-switch button {
+  padding: 12px 20px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gg-mode-switch button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.gg-mode-switch .godmode[aria-pressed='true'] {
+  background: linear-gradient(135deg, #e53935, #8e24aa);
+  color: #fff;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
+}
+
+.gg-main {
+  padding: 24px 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .gg-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gg-stage {
+  position: relative;
+  min-height: 520px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-ink);
+  overflow: hidden;
+}
+
+.gg-countin-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: clamp(160px, 32vw, 360px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  z-index: 5;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: countin-pop 400ms ease-out;
+}
+
+@keyframes countin-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* ---- Finger close-up overlay ---- */
+.gg-closeup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 20;
+  animation: countin-pop 180ms ease-out;
+}
+
+.gg-closeup-card {
+  width: min(1100px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: var(--surface);
+  border: 4px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 8px 8px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+
+.gg-closeup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 26px;
+  border-bottom: 3px solid var(--ink);
+  background: var(--bg-alt);
+}
+
+.gg-closeup-title {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+
+.gg-closeup-title .tag {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 900;
+  padding: 6px 10px;
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 999px;
+}
+
+.gg-closeup-title .name {
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.gg-closeup-close {
+  width: 56px;
+  height: 56px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 28px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.gg-closeup-body {
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) minmax(280px, 360px);
+  gap: 24px;
+  padding: 24px;
+}
+
+@media (max-width: 900px) {
+  .gg-closeup-body { grid-template-columns: 1fr; }
+}
+
+.gg-closeup-diagram {
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  border: 3px dashed var(--ink);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.gg-closeup-fingers {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gg-closeup-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 18px;
+  color: var(--ink);
+  min-height: 80px;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+
+.gg-closeup-row[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--bg);
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.gg-closeup-row .dot {
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  color: #fff;
+  font-weight: 900;
+  font-size: 28px;
+  display: grid;
+  place-items: center;
+}
+
+.gg-closeup-row .copy {
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.gg-closeup-footer {
+  padding: 12px 24px;
+  border-top: 3px solid var(--ink);
+  background: var(--bg-alt);
+  color: var(--ink-mute);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.gg-tap-hint {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.gg-closeup-opener {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: zoom-in;
+  font: inherit;
+  color: inherit;
+  display: block;
+}
+
+.gg-sidepanel {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gg-card {
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-ink);
+  padding: 18px 20px;
+}
+
+.gg-card h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.gg-card .row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gg-footer {
+  padding: 14px 28px;
+  border-top: 3px solid var(--ink);
+  background: var(--surface);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--ink-mute);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gg-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--bg-alt);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ---- Rhythm view (W1) ---- */
+.w1 {
+  width: 100%;
+  height: 100%;
+  padding: var(--stage-pad);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--stage-gap);
+  background: var(--surface);
+}
+
+.w1-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 20px;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+
+.w1-stage {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .w1-stage { grid-template-columns: 1fr; }
+}
+
+.w1-now, .w1-next {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-ink);
+  background: var(--surface);
+  transition: transform 200ms ease, background 200ms ease;
+}
+
+.w1-next { background: var(--bg-alt); }
+
+.w1-now .label, .w1-next .label {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.w1-now.on-beat {
+  transform: scale(1.015);
+  background: #fff;
+  box-shadow: 6px 6px 0 var(--accent);
+}
+
+.w1-beatdots {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.w1-beatdots .dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: transparent;
+  border: 3px solid var(--ink);
+}
+
+.w1-beatdots .dot.active {
+  background: var(--accent);
+  transform: scale(1.12);
+  transition: transform 80ms ease-out;
+}
+
+.w1-beatdots .dot.downbeat {
+  border-width: 4px;
+}
+
+/* ---- Lead GODMODE (W4) ---- */
+.w4 {
+  width: 100%;
+  min-height: 100%;
+  padding: var(--stage-pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--stage-gap);
+  background:
+    linear-gradient(180deg, rgba(229, 57, 53, 0.04), rgba(142, 36, 170, 0.04)),
+    var(--surface);
+}
+
+.w4 .w4-footer { margin-top: auto; }
+
+.w4-neck-wrap {
+  padding: 12px 16px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-ink);
+  background: var(--surface);
+}
+
+.w4-neck-wrap .lbl {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.w4-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.w4-title {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.w4-title .godmode-tag {
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  background: linear-gradient(135deg, #e53935, #8e24aa);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.w4-staff-wrap {
+  position: relative;
+  padding: 20px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-ink);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.w4-playhead {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+  box-shadow: 0 0 0 6px rgba(229, 57, 53, 0.12);
+  pointer-events: none;
+  transition: left 120ms linear;
+  z-index: 2;
+}
+
+.w4-footer {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .w4-footer { grid-template-columns: 1fr; }
+}
+
+.w4-posbox {
+  padding: 14px 16px;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-ink);
+  text-align: center;
+}
+
+.w4-posbox .lbl {
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.w4-voice {
+  padding: 14px 18px;
+  border: 3px dashed var(--ink);
+  border-radius: var(--radius);
+  background: var(--bg-alt);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+}
+
+.w4-voice .pulse {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(0.7); opacity: 0.6; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* ---- Controls bar ---- */
+.gg-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.gg-controls .spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+/* ---- Range/toggle tweaks ---- */
+.gg-tweaks label {
+  display: block;
+  font-size: 14px;
+  color: var(--ink-mute);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.gg-tweaks input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.gg-tweaks .toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.gg-tweaks .toggle[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.gg-bpm-readout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.gg-bpm-readout b {
+  font-size: 28px;
+}
+
+/* ---- Listen mode card ---- */
+.gg-listen-card h3 { margin-bottom: 12px; }
+
+.gg-listen-btn {
+  appearance: none;
+  width: 100%;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: left;
+  color: var(--ink);
+  background: var(--bg-alt);
+  border: 3px solid var(--ink);
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 80ms ease, box-shadow 80ms ease, background 200ms ease;
+}
+
+.gg-listen-btn.on {
+  background: var(--accent);
+  color: #fff;
+  transform: translate(2px, 2px);
+  box-shadow: none;
+  animation: listen-pulse 1.4s ease-in-out infinite;
+}
+
+.gg-listen-btn.subtle { font-size: 14px; padding: 10px 12px; }
+
+@keyframes listen-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.15); }
+}
+
+.gg-hearing {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 3px dashed var(--ink);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.gg-hearing .label {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 800;
+}
+
+.gg-hearing .label.quiet { color: var(--ink-mute); opacity: 0.7; }
+
+.gg-hearing b {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.gg-hearing .score {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ink-mute);
+  font-weight: 700;
+}
+
+/* ---- Voice command toast ---- */
+.gg-voice-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 50;
+  padding: 14px 20px;
+  background: var(--ink);
+  color: var(--bg);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 6px 6px 0 var(--accent);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  animation: voice-toast-in 140ms ease-out;
+  pointer-events: none;
+}
+
+@keyframes voice-toast-in {
+  from { transform: translateY(-12px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+@media (max-width: 600px) {
+  .gg-voice-toast {
+    top: 10px;
+    right: 10px;
+    padding: 10px 14px;
+    font-size: 15px;
+    box-shadow: 4px 4px 0 var(--accent);
+  }
+}
+
+/* =====================================================================
+   Reduced motion — WCAG 2.3.3 (AAA)
+   When the OS/browser requests reduced motion, strip every animation /
+   transition / transform to a near-instant step. Essential feedback
+   (playhead position, count-in number) still renders — it just lands
+   without sweeping. Also halts the infinite pulse loops used for "listen"
+   / "voice" indicators so they don't drive visual vertigo.
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .gg-listen-btn.on { animation: none !important; }
+  .w4-voice .pulse { animation: none !important; opacity: 0.9 !important; transform: none !important; }
+  .w4-playhead { transition: none !important; }
+  .gg-voice-toast { animation: none !important; }
+  .gg-countin-overlay { animation: none !important; }
+  .w1-beatdots .dot.active { transition: none !important; transform: none !important; }
+}
+
+/* =====================================================================
+   Skip-to-main-content link — WCAG 2.4.1 (A) / 2.4.8 (AAA)
+   Hidden off-screen until the user tabs to it.
+   ===================================================================== */
+.gg-skip-link {
+  position: absolute;
+  left: -10000px;
+  top: 8px;
+  z-index: 100;
+  padding: 12px 18px;
+  background: var(--ink);
+  color: var(--bg);
+  border: 3px solid var(--accent);
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 16px;
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gg-skip-link:focus {
+  left: 12px;
+  outline: 4px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A visually-hidden but SR-readable polite live region container. */
+.gg-live-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =====================================================================
+   Tablet breakpoint — 900px
+   ===================================================================== */
+@media (max-width: 900px) {
+  .gg-topbar {
+    padding: 16px 18px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .gg-topbar h1 { font-size: 22px; }
+  .gg-topbar .gg-title-sub { font-size: 13px; }
+
+  .gg-main { padding: 14px 14px; gap: 14px; }
+  .gg-stage { min-height: 420px; }
+
+  .gg-footer { padding: 10px 14px; }
+  .gg-footer .gg-controls { gap: 8px; }
+
+  .w1 .w1-stage { grid-template-columns: 1fr !important; }
+
+  .w4-header { flex-wrap: wrap; }
+  .w4-title { font-size: 22px; }
+  .w4-title .godmode-tag { font-size: 11px; letter-spacing: 0.18em; }
+
+  .gg-closeup-header { padding: 12px 16px; }
+  .gg-closeup-title .name { font-size: 40px; }
+  .gg-closeup-body { padding: 16px; gap: 14px; }
+  .gg-closeup-diagram { min-height: 260px; }
+  .gg-closeup-row { padding: 12px 14px; font-size: 16px; }
+  .gg-closeup-row .dot { width: 44px; height: 44px; font-size: 22px; }
+}
+
+/* =====================================================================
+   Phone breakpoint — 600px
+   ===================================================================== */
+@media (max-width: 600px) {
+  .gg-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .gg-mode-switch { align-self: stretch; }
+  .gg-mode-switch button { flex: 1; padding: 10px 12px; font-size: 15px; }
+
+  .gg-main { padding: 10px; }
+  .gg-stage { min-height: 360px; }
+
+  /* Shrink every playback button (BigButton uses inline styles, so override
+     targets the concrete button element here). */
+  .gg-controls button {
+    padding: 10px 14px !important;
+    font-size: 16px !important;
+    min-width: 0 !important;
+    min-height: 56px !important;
+    box-shadow: 2px 2px 0 var(--ink) !important;
+  }
+  .gg-controls { gap: 6px; justify-content: flex-start; }
+
+  .w1 { padding: 14px; gap: 12px; }
+  .w1-header { font-size: 15px; flex-wrap: wrap; gap: 6px; }
+  .w1-now, .w1-next { padding: 14px; }
+  .w1-now .label, .w1-next .label { font-size: 18px; }
+  .w1-beatdots .dot { width: 16px; height: 16px; border-width: 2px; }
+
+  .w4 { padding: 14px; gap: 12px; }
+  .w4-title { font-size: 18px; }
+  .w4-voice { font-size: 15px; padding: 10px 12px; }
+  .w4-neck-wrap { padding: 8px 10px; }
+  .w4-staff-wrap { padding: 12px 10px; }
+
+  .gg-footer > div > div:last-child {
+    /* Keyboard shortcuts hint is useless on phone — hide it. */
+    display: none;
+  }
+
+  .gg-countin-overlay { font-size: clamp(120px, 48vw, 260px); }
+
+  .gg-closeup { padding: 10px; }
+  .gg-closeup-card { border-width: 3px; box-shadow: 5px 5px 0 var(--ink); }
+  .gg-closeup-title { gap: 10px; flex-wrap: wrap; }
+  .gg-closeup-title .name { font-size: 32px; }
+  .gg-closeup-close { width: 44px; height: 44px; font-size: 22px; }
+  .gg-closeup-body { padding: 12px; }
+  .gg-closeup-footer { padding: 10px 14px; font-size: 12px; }
+
+  .gg-card { padding: 12px 14px; }
+  .gg-sidepanel { position: static; }
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Guitar Guru">
+  <title>Guitar Guru</title>
+  <!-- warm cream background -->
+  <rect width="512" height="512" fill="#fffdf5"/>
+  <!-- chunky accent-red chord dot -->
+  <circle cx="256" cy="256" r="192" fill="#e53935"/>
+  <!-- giant black capital G -->
+  <text
+    x="256"
+    y="256"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="Helvetica, Arial, 'Aptos', sans-serif"
+    font-weight="900"
+    font-size="364"
+    fill="#111111">G</text>
+</svg>
