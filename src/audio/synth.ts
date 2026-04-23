@@ -107,14 +107,24 @@ export function pluck(stringNum: number, fret: number, opts: PluckOpts = {}): vo
   const pan = STRING_PAN[stringNum] ?? 0;
 
   // ---- String resonator (Karplus-Strong) ----
+  //
+  // Excitation: short pink-ish noise burst shaped by an envelope that peaks at
+  // ~0.28 (NOT 1.0). The raw noise buffer is ±1; sending that into the delay
+  // line at full amplitude makes the KS output also ±1 per cycle, and a 6-string
+  // strum sums to ~1.7 at the destination, which hard-clips the DAC into the
+  // "screaming distortion" regime. 0.28 keeps per-voice dry peak ≈ 0.08 at
+  // destination (×bodyEQ ×outGain ×master), so even 6 overlapping voices stay
+  // under 0.5 at the bus.
   const noiseSource = ctx.createBufferSource();
   noiseSource.buffer = getNoiseBuffer(ctx);
-  // Narrow a short burst window by gating with a gain node.
   const burstGain = ctx.createGain();
-  const burstDur = 0.006; // 6 ms excitation
-  burstGain.gain.setValueAtTime(1, when);
-  burstGain.gain.setValueAtTime(1, when + burstDur);
-  burstGain.gain.linearRampToValueAtTime(0, when + burstDur + 0.001);
+  const burstDur = 0.006;
+  const excitationPeak = 0.28;
+  // Trapezoidal window so the burst edges don't pop — 0.5 ms fade in/out.
+  burstGain.gain.setValueAtTime(0, when);
+  burstGain.gain.linearRampToValueAtTime(excitationPeak, when + 0.0005);
+  burstGain.gain.setValueAtTime(excitationPeak, when + burstDur);
+  burstGain.gain.linearRampToValueAtTime(0, when + burstDur + 0.0005);
 
   const delay = ctx.createDelay(0.05);
   delay.delayTime.value = 1 / freq;
@@ -139,6 +149,8 @@ export function pluck(stringNum: number, fret: number, opts: PluckOpts = {}): vo
   delay.connect(voiceOut);
 
   // ---- Pick transient (parallel click) ----
+  // Scaled-down peak; the filtered-noise click is ADD'd to the KS output, so
+  // any boost here counts directly against the voice's peak budget.
   const pickSource = ctx.createBufferSource();
   pickSource.buffer = getNoiseBuffer(ctx);
   const pickBandpass = ctx.createBiquadFilter();
@@ -147,16 +159,18 @@ export function pluck(stringNum: number, fret: number, opts: PluckOpts = {}): vo
   pickBandpass.Q.value = 1.1;
   const pickGain = ctx.createGain();
   pickGain.gain.setValueAtTime(0.0001, when);
-  pickGain.gain.exponentialRampToValueAtTime(0.25, when + 0.001); // -12 dB-ish
+  pickGain.gain.exponentialRampToValueAtTime(0.08, when + 0.001);
   pickGain.gain.exponentialRampToValueAtTime(0.0001, when + 0.003);
   pickSource.connect(pickBandpass).connect(pickGain).connect(voiceOut);
 
   // ---- Body EQ + overall envelope + pan ----
+  // +1.5 dB is enough to suggest a resonant body without adding another
+  // multiplicative 1.4× to the voice peak.
   const bodyEQ = ctx.createBiquadFilter();
   bodyEQ.type = 'peaking';
   bodyEQ.frequency.value = 160;
   bodyEQ.Q.value = 1.2;
-  bodyEQ.gain.value = 3; // +3 dB bump
+  bodyEQ.gain.value = 1.5;
 
   const outGain = ctx.createGain();
   outGain.gain.setValueAtTime(gain, when);
