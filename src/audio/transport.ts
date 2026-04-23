@@ -1,6 +1,18 @@
-// A tiny BPM-driven beat clock. Emits integer beat indices (0, 1, 2, …) to a
-// subscriber, scheduled via requestAnimationFrame against performance.now() so
-// it stays in sync with the browser's render loop regardless of tab throttling.
+// BPM-driven beat clock. Two emitters run side by side:
+//
+//   rAF loop  → onTick (every frame, carries beat + phase)
+//              → onBeat (once per integer beat; drives voice/haptics/UI)
+//   Scheduler → onAudioBeat (once per integer beat, with an audio-clock `when`;
+//                            drives synth strums, metronome clicks, tab notes,
+//                            finger cues — anything that must land
+//                            sample-accurately on the audio clock)
+//
+// The rAF path is the visual source of truth and has always existed. The
+// scheduler path is optional — Transport wires it up only when both
+// `audioCtx` and `onAudioBeat` are provided. Both are anchored at the same
+// play() moment, so they stay phase-aligned to within one audio callback.
+
+import { BeatScheduler } from './scheduler';
 
 export type TransportState = {
   playing: boolean;
@@ -17,6 +29,10 @@ export type TransportOpts = {
   loop: { fromBeat: number; toBeat: number } | null;
   onTick: (state: TransportState) => void;
   onBeat: (beat: number) => void;
+  /** Fires for each integer beat with an audio-clock `when` for sample-accurate scheduling. */
+  onAudioBeat?: (beat: number, when: number) => void;
+  /** When provided with `onAudioBeat`, a BeatScheduler runs against this context. */
+  audioCtx?: AudioContext;
 };
 
 export class Transport {
@@ -26,19 +42,57 @@ export class Transport {
   private playing = false;
   private lastBeat = -1;
   private opts: TransportOpts;
+  private scheduler: BeatScheduler | null = null;
 
   constructor(opts: TransportOpts) {
     this.opts = opts;
+    this.buildScheduler();
   }
 
   update(patch: Partial<TransportOpts>): void {
-    this.opts = { ...this.opts, ...patch };
+    const prev = this.opts;
+    this.opts = { ...prev, ...patch };
+    if (this.scheduler) {
+      // Propagate tempo / loop / length changes to the audio scheduler so it
+      // stays aligned with the rAF clock.
+      this.scheduler.update({
+        bpm: this.opts.bpm,
+        tempoScale: this.opts.tempoScale,
+        totalBeats: this.opts.totalBeats,
+        loop: this.opts.loop,
+      });
+    }
+    // If onAudioBeat or audioCtx changed, rebuild the scheduler.
+    if (patch.onAudioBeat !== undefined || patch.audioCtx !== undefined) {
+      const wasRunning = this.scheduler?.isRunning() ?? false;
+      const currentBeat = wasRunning ? this.currentBeat() : this.startBeat;
+      this.scheduler?.stop();
+      this.scheduler = null;
+      this.buildScheduler();
+      const rebuilt = this.scheduler as BeatScheduler | null;
+      if (wasRunning && rebuilt) {
+        rebuilt.start({
+          startBeat: currentBeat,
+          bpm: this.opts.bpm,
+          tempoScale: this.opts.tempoScale,
+          totalBeats: this.opts.totalBeats,
+          loop: this.opts.loop,
+        });
+      }
+    }
   }
 
   play(): void {
     if (this.playing) return;
     this.playing = true;
     this.startedAt = performance.now();
+    this.scheduler?.start({
+      startBeat: this.startBeat,
+      bpm: this.opts.bpm,
+      tempoScale: this.opts.tempoScale,
+      totalBeats: this.opts.totalBeats,
+      loop: this.opts.loop,
+    });
     this.loop();
   }
 
@@ -47,6 +101,7 @@ export class Transport {
     this.playing = false;
     this.startBeat = this.currentBeat();
     cancelAnimationFrame(this.raf);
+    this.scheduler?.stop();
     this.opts.onTick({ playing: false, beat: Math.floor(this.startBeat), beatPhase: this.startBeat % 1 });
   }
 
@@ -60,7 +115,12 @@ export class Transport {
     this.startedAt = performance.now();
     this.lastBeat = Math.floor(clamped) - 1;
     this.opts.onTick({ playing: this.playing, beat: Math.floor(clamped), beatPhase: clamped % 1 });
-    if (this.playing) this.opts.onBeat(Math.floor(clamped));
+    if (this.playing) {
+      this.opts.onBeat(Math.floor(clamped));
+      this.scheduler?.seek(clamped);
+    } else {
+      this.scheduler?.seek(clamped);
+    }
   }
 
   /** Jump by an integer bar delta from the current position, snapping to the bar start. */
@@ -77,6 +137,21 @@ export class Transport {
   dispose(): void {
     this.playing = false;
     cancelAnimationFrame(this.raf);
+    this.scheduler?.stop();
+    this.scheduler = null;
+  }
+
+  private buildScheduler(): void {
+    const { audioCtx, onAudioBeat } = this.opts;
+    if (!audioCtx || !onAudioBeat) return;
+    this.scheduler = new BeatScheduler({
+      ctx: audioCtx,
+      onBeat: (beat, when) => this.opts.onAudioBeat?.(beat, when),
+      onStop: () => {
+        // End-of-song: rAF path will also see totalBeats cross and stop UI;
+        // the scheduler just tears itself down so no more audio fires past end.
+      },
+    });
   }
 
   private currentBeat(): number {
@@ -101,6 +176,7 @@ export class Transport {
     } else if (beatPos >= totalBeats) {
       // End of song — stop cleanly.
       this.playing = false;
+      this.scheduler?.stop();
       onTick({ playing: false, beat: totalBeats - 1, beatPhase: 0 });
       return;
     }

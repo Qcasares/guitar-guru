@@ -1,4 +1,5 @@
 import type { Finger } from '../music/types';
+import { getSharedCtx } from './audio-context';
 
 /**
  * Finger sonification — accessible audio cue per fretting finger.
@@ -10,12 +11,6 @@ import type { Finger } from '../music/types';
  * be layered under chord narration or the metronome without masking them.
  */
 
-interface WebkitWindow {
-  webkitAudioContext?: typeof AudioContext;
-}
-
-type AudioContextCtor = typeof AudioContext;
-
 const FINGER_HZ: Record<Finger, number> = {
   T: 220.0,
   1: 261.63,
@@ -24,31 +19,9 @@ const FINGER_HZ: Record<Finger, number> = {
   4: 523.25,
 };
 
-let ctx: AudioContext | null = null;
-let master: GainNode | null = null;
-
-/** Lazily construct (and resume) a shared AudioContext + master gain. */
-function getCtx(): AudioContext {
-  if (ctx && master) {
-    if (ctx.state === 'suspended') void ctx.resume();
-    return ctx;
-  }
-  const Ctor: AudioContextCtor | undefined =
-    typeof window !== 'undefined'
-      ? (window.AudioContext ?? (window as unknown as WebkitWindow).webkitAudioContext)
-      : undefined;
-  if (!Ctor) throw new Error('Web Audio API is not available in this environment.');
-  ctx = new Ctor();
-  master = ctx.createGain();
-  master.gain.value = 0.45;
-  master.connect(ctx.destination);
-  if (ctx.state === 'suspended') void ctx.resume();
-  return ctx;
-}
-
 /** Idempotent — ensures the shared AudioContext is built and running. */
 export function primeFingerAudio(): void {
-  getCtx();
+  getSharedCtx();
 }
 
 /**
@@ -62,17 +35,16 @@ export function playFingerCue(
   finger: Finger,
   opts?: { when?: number; gain?: number },
 ): void {
-  const audio = getCtx();
-  if (!master) return;
-  const when = opts?.when ?? audio.currentTime;
+  const { ctx, master } = getSharedCtx();
+  const when = opts?.when ?? ctx.currentTime;
   const peak = opts?.gain ?? 0.25;
   const freq = FINGER_HZ[finger];
 
-  const osc = audio.createOscillator();
+  const osc = ctx.createOscillator();
   osc.type = 'sine';
   osc.frequency.value = freq;
 
-  const amp = audio.createGain();
+  const amp = ctx.createGain();
   amp.gain.setValueAtTime(0.0001, when);
   amp.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), when + 0.005);
   amp.gain.exponentialRampToValueAtTime(0.0001, when + 0.155);
