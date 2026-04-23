@@ -39,11 +39,9 @@ export function TweaksPanel({
   onShowFingers,
 }: TweaksPanelProps) {
   return (
-    <div className="gg-card gg-tweaks" aria-label="Display tweaks">
-      <h3>Tweaks</h3>
-
+    <div className="gg-tweaks" aria-label="Display tweaks">
       <label htmlFor="tweak-theme">Theme</label>
-      <div className="row" id="tweak-theme" style={{ marginBottom: 14 }}>
+      <div className="row" id="tweak-theme" style={{ marginBottom: 12 }}>
         {THEMES.map((t) => (
           <button
             key={t.id}
@@ -56,7 +54,7 @@ export function TweaksPanel({
       </div>
 
       <label htmlFor="tweak-size">Chord size</label>
-      <div className="row" id="tweak-size" style={{ marginBottom: 14 }}>
+      <div className="row" id="tweak-size" style={{ marginBottom: 12 }}>
         {SIZES.map((s) => (
           <button
             key={s}
@@ -69,7 +67,7 @@ export function TweaksPanel({
       </div>
 
       <label htmlFor="tweak-density">Layout density</label>
-      <div className="row" id="tweak-density" style={{ marginBottom: 14 }}>
+      <div className="row" id="tweak-density" style={{ marginBottom: 12 }}>
         {DENSITIES.map((d) => (
           <button
             key={d}

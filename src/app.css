@@ -126,15 +126,13 @@ html, body, #root {
   background-image: none;
 }
 
-/* Editorial ornaments (thin ink hairlines on card / ctl-group / status-rail
-   tops) are a Classic-theme signature. Suppress in Sketch (owns the hard
-   ink-shadow aesthetic) and High-contrast (no decoration allowed). */
+/* Editorial ornaments (thin ink hairlines on card / ctl-group tops) are a
+   Classic-theme signature. Suppress in Sketch (owns the hard ink-shadow
+   aesthetic) and High-contrast (no decoration allowed). */
 :root[data-theme='sketch'] .gg-card::before,
 :root[data-theme='sketch'] .gg-ctl-group::before,
-:root[data-theme='sketch'] .gg-status-rail::before,
 :root[data-theme='high-contrast'] .gg-card::before,
-:root[data-theme='high-contrast'] .gg-ctl-group::before,
-:root[data-theme='high-contrast'] .gg-status-rail::before {
+:root[data-theme='high-contrast'] .gg-ctl-group::before {
   display: none;
 }
 
@@ -347,9 +345,9 @@ button:focus-visible,
 .gg-main {
   padding: 24px 28px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 1100px) {
@@ -571,7 +569,205 @@ button:focus-visible,
   top: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Reserve space for the scrollbar so card borders don't get clipped. */
+  padding-right: 6px;
+  margin-right: -6px;
+  align-self: start;
+}
+
+/* --- Now card — merges chord state, meta, sections, A-B loop, track --- */
+.gg-now-card { padding: 18px 20px 20px; }
+.gg-now-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.gg-now-chord {
+  font-size: 46px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--ink);
+}
+.gg-now-section {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+}
+.gg-now-lyric {
+  font-size: 18px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink);
+  margin-top: 6px;
+  line-height: 1.35;
+}
+.gg-now-meta {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute);
+  margin-top: 10px;
+}
+.gg-now-meta b { color: var(--ink); font-weight: 900; }
+.gg-now-divider {
+  height: 1px;
+  background: var(--ink);
+  opacity: 0.14;
+  margin: 14px 0 12px;
+}
+.gg-now-subhead {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0 0 8px;
+}
+.gg-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gg-chip {
+  padding: 6px 11px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.gg-chip:hover { background: var(--bg-alt); }
+.gg-chip[aria-current='true'] {
+  background: var(--ink);
+  color: var(--surface);
+}
+.gg-chip .meta {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.7;
+  margin-left: 6px;
+  letter-spacing: 0.1em;
+}
+.gg-now-inline {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.gg-now-inline .label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-right: 8px;
+}
+.gg-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+.gg-topbar-change {
+  padding: 7px 13px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.gg-topbar-change:hover { background: var(--bg-alt); }
+.gg-topbar-change:focus-visible {
+  outline: 3px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* --- Disclosure (native <details>) styled as a card --- */
+.gg-disclosure {
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-ink);
+  position: relative;
+  overflow: hidden;
+}
+.gg-disclosure[open] { padding-bottom: 2px; }
+.gg-disclosure > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px 18px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.gg-disclosure > summary::-webkit-details-marker { display: none; }
+.gg-disclosure > summary::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid var(--ink);
+  transition: transform 160ms ease;
+  flex: 0 0 auto;
+}
+.gg-disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+.gg-disclosure > summary:hover { background: var(--bg-alt); }
+.gg-disclosure > summary:focus-visible {
+  outline: 3px solid var(--accent-blue);
+  outline-offset: -3px;
+}
+.gg-disclosure-body {
+  padding: 4px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gg-disclosure-hint {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  margin: 0 0 2px;
+  line-height: 1.4;
+}
+.gg-disclosure-subhead {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 6px 0 4px;
 }
 
 .gg-card {
@@ -803,14 +999,14 @@ button:focus-visible,
 }
 
 .w4-footer {
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
   gap: 20px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 900px) {
-  .w4-footer { grid-template-columns: 1fr; }
+  .w4-footer { flex-direction: column; align-items: stretch; }
 }
 
 .w4-posbox {
@@ -832,15 +1028,16 @@ button:focus-visible,
 }
 
 .w4-voice {
-  padding: 14px 18px;
-  border: 3px dashed var(--ink);
+  padding: 12px 16px;
+  border: 2px dashed var(--ink);
   border-radius: var(--radius);
   background: var(--bg-alt);
   font-weight: 700;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  font-size: 18px;
+  gap: 10px;
+  font-size: 16px;
+  max-width: 100%;
 }
 
 .w4-voice .pulse {
@@ -856,13 +1053,28 @@ button:focus-visible,
   50% { transform: scale(1.2); opacity: 1; }
 }
 
-/* ---- Controls bar ---- */
+/* ---- Controls bar ----
+   Two deliberate rows: [Transport | Tempo | Loop] on row 1, [Mix] on row 2.
+   A zero-height 100%-basis break forces Mix onto its own line. At narrow
+   widths the groups wrap naturally. */
 .gg-controls {
   display: flex;
   gap: 12px;
   align-items: stretch;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+.gg-ctl-break {
+  flex-basis: 100%;
+  height: 0;
+  margin: 0;
+}
+
+.gg-ctl-group-mix {
+  /* Mix has the most buttons — let it span full width of its row for a
+     balanced layout rather than hugging the center. */
+  flex: 1 1 100%;
 }
 
 .gg-controls .spacer {
@@ -910,73 +1122,6 @@ button:focus-visible,
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
-}
-
-/* Status rail — instrument-panel strip above the stage. Ink-filled in a
-   warm surface, with 1px hairlines between chips (not thick borders) so
-   the rail reads as one continuous readout instead of a row of cards.
-   Tabular numerics so bar-counter and BPM don't wiggle when they tick. */
-.gg-status-rail {
-  display: flex;
-  gap: 0;
-  align-items: stretch;
-  flex-wrap: wrap;
-  padding: 14px 4px;
-  border: 2px solid var(--ink);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-ink);
-  margin-bottom: var(--stage-gap);
-  position: relative;
-  overflow: hidden;
-}
-
-.gg-status-rail::before {
-  content: '';
-  position: absolute;
-  inset: 4px 4px auto 4px;
-  height: 2px;
-  background: var(--ink);
-  opacity: 0.08;
-}
-
-.gg-status-chip {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 4px 20px;
-  border-right: 1px solid currentColor;
-  min-width: 120px;
-  color: var(--ink);
-}
-
-.gg-status-chip:last-child {
-  border-right: none;
-}
-
-.gg-status-chip .key {
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--ink-mute);
-}
-
-.gg-status-chip .val {
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: -0.035em;
-  color: inherit;
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-}
-
-.gg-status-chip.is-active {
-  color: var(--accent);
-}
-
-.gg-status-chip.is-active .val {
-  color: var(--accent);
 }
 
 /* Sections jump card — large tap targets, one per song section.
@@ -1246,9 +1391,22 @@ button:focus-visible,
     gap: 12px;
     flex-wrap: wrap;
   }
-  .gg-breadcrumb { font-size: 18px; gap: 6px; }
+  .gg-breadcrumb { font-size: 18px; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
   .gg-crumb-strong { max-width: 90vw; }
   .gg-crumb-mute { font-size: 12px; }
+  /* Drop verbose prefixes and the artist crumb at tablet widths; keep title + section. */
+  .gg-crumb-prefix,
+  .gg-crumb-sep-title,
+  .gg-crumb-sep-artist,
+  .gg-crumb-artist {
+    display: none;
+  }
+  .gg-crumb-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 55vw;
+  }
 
   .gg-main { padding: 14px 14px; gap: 14px; }
   .gg-stage { min-height: 420px; }
@@ -1280,6 +1438,13 @@ button:focus-visible,
   }
   .gg-mode-switch { align-self: stretch; }
   .gg-mode-switch button { flex: 1; padding: 10px 12px; font-size: 15px; }
+  /* At phone widths, drop the section crumb too — the Now card carries it. */
+  .gg-crumb-sep-section,
+  .gg-crumb-section {
+    display: none;
+  }
+  /* Phone layout stacks topbar vertically, so the title has the full row width. */
+  .gg-crumb-title { max-width: 85vw; }
 
   .gg-main { padding: 10px; }
   .gg-stage { min-height: 360px; }
@@ -1323,5 +1488,23 @@ button:focus-visible,
   .gg-closeup-footer { padding: 10px 14px; font-size: 12px; }
 
   .gg-card { padding: 12px 14px; }
-  .gg-sidepanel { position: static; }
+  .gg-sidepanel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    margin-right: 0;
+  }
+}
+
+/* At 1100px (and under) the layout goes single-column — also drop the
+   sticky/scroll container so the sidebar flows under the stage naturally. */
+@media (max-width: 1100px) {
+  .gg-sidepanel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    margin-right: 0;
+  }
 }

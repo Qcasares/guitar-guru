@@ -147,7 +147,9 @@ export function PlaybackControls({
         </div>
       </div>
 
-      <div className="gg-ctl-group" role="group" aria-label="Mix">
+      <div className="gg-ctl-break" aria-hidden="true" />
+
+      <div className="gg-ctl-group gg-ctl-group-mix" role="group" aria-label="Mix">
         <div className="gg-ctl-group-label">Mix</div>
         <div className="gg-ctl-group-row">
           <BigButton size="md" active={metronome} onClick={onToggleMetronome} label="Toggle metronome">METRO</BigButton>

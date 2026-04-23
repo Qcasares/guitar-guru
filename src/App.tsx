@@ -19,6 +19,7 @@ import { Transport } from './audio/transport';
 import { AudioTrack } from './audio/audio-track';
 import { deleteBlob, getBlob, listBlobIds } from './lib/audio-storage';
 import { click as metronomeClick, primeAudio } from './audio/metronome';
+import { getSharedCtx } from './audio/audio-context';
 import { speak, stop as stopVoice } from './audio/voice';
 import { strum, playTabNote } from './audio/synth';
 import { AudioInput, rms } from './audio/audio-input';
@@ -219,11 +220,10 @@ export function App() {
     }
   }, [mode, voice]);
 
+  // rAF-driven beat hook — only UI-visible effects that don't need sample accuracy.
   const handleBeat = useCallback((b: number) => {
     const beatInBar = b % song.beatsPerBar;
     const barIdx = Math.floor(b / song.beatsPerBar);
-    const bar = song.bars[barIdx];
-    if (metronome) metronomeClick({ accent: beatInBar === 0 });
     announceForBeat(b);
 
     if (hapticsOn) {
@@ -232,29 +232,34 @@ export function App() {
       else if (beatInBar === 0) buzz(HAPTIC.downbeat);
       else buzz(HAPTIC.beat);
     }
+  }, [announceForBeat, hapticsOn, song]);
+
+  // Audio-clock beat hook — everything that must land sample-accurately.
+  // `when` is an AudioContext time in seconds; synth/metronome/cue all accept it.
+  const handleAudioBeat = useCallback((b: number, when: number) => {
+    const beatInBar = b % song.beatsPerBar;
+    const barIdx = Math.floor(b / song.beatsPerBar);
+    const bar = song.bars[barIdx];
+    if (metronome) metronomeClick({ accent: beatInBar === 0, when });
 
     if (synthOn && bar) {
       if (mode === 'rhythm') {
-        // Strum chord on beats 0 and 2 (down, up) — classic 4/4 rhythm pattern.
         if (beatInBar === 0 && bar.chord && CHORD_LIB[bar.chord]) {
-          strum(CHORD_LIB[bar.chord], { direction: 'down', gain: 0.55 });
+          strum(CHORD_LIB[bar.chord], { direction: 'down', gain: 0.55, when });
         } else if (beatInBar === 2 && bar.chord && CHORD_LIB[bar.chord]) {
-          strum(CHORD_LIB[bar.chord], { direction: 'up', gain: 0.38 });
+          strum(CHORD_LIB[bar.chord], { direction: 'up', gain: 0.38, when });
         }
       } else {
-        // Lead: play whichever tab note falls on this integer beat.
         const noteOnBeat = bar.notes.find((n) => Math.floor(n.beat) === beatInBar);
-        if (noteOnBeat) playTabNote(noteOnBeat);
+        if (noteOnBeat) playTabNote(noteOnBeat, { when });
       }
     }
 
-    // Finger sonification — pitched cue under the metronome, tied to the
-    // active note's fretting finger so colour is never the sole encoding.
     if (fingerSonification && mode === 'lead' && bar) {
       const noteOnBeat = bar.notes.find((n) => Math.floor(n.beat) === beatInBar);
-      if (noteOnBeat?.finger) playFingerCue(noteOnBeat.finger, { gain: 0.18 });
+      if (noteOnBeat?.finger) playFingerCue(noteOnBeat.finger, { gain: 0.18, when });
     }
-  }, [metronome, announceForBeat, synthOn, mode, hapticsOn, song, fingerSonification]);
+  }, [metronome, synthOn, mode, song, fingerSonification]);
 
   const handleTick = useCallback((s: { playing: boolean; beat: number; beatPhase: number }) => {
     setPlaying(s.playing);
@@ -265,6 +270,10 @@ export function App() {
   // Lazily (re)create the transport and keep its options in sync with React state.
   useEffect(() => {
     if (!transportRef.current) {
+      // Shared ctx: synth/metronome/cue all route here, and the scheduler fires
+      // onAudioBeat against this clock so every event lands sample-accurately.
+      const shared = getSharedCtx();
+      audioCtxRef.current = shared.ctx;
       transportRef.current = new Transport({
         bpm: song.bpm,
         tempoScale,
@@ -272,6 +281,8 @@ export function App() {
         loop: loopRange,
         onTick: handleTick,
         onBeat: handleBeat,
+        onAudioBeat: handleAudioBeat,
+        audioCtx: shared.ctx,
       });
     } else {
       transportRef.current.update({
@@ -281,16 +292,16 @@ export function App() {
         loop: loopRange,
         onTick: handleTick,
         onBeat: handleBeat,
+        onAudioBeat: handleAudioBeat,
       });
     }
-  }, [song.bpm, totalBeats, tempoScale, loopRange, handleTick, handleBeat]);
+  }, [song.bpm, totalBeats, tempoScale, loopRange, handleTick, handleBeat, handleAudioBeat]);
 
   useEffect(() => () => transportRef.current?.dispose(), []);
 
   const getAudioCtx = useCallback((): AudioContext => {
     if (!audioCtxRef.current) {
-      const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
-      audioCtxRef.current = new Ctor();
+      audioCtxRef.current = getSharedCtx().ctx;
     }
     return audioCtxRef.current;
   }, []);
@@ -756,62 +767,37 @@ export function App() {
             )}
           </div>
           <nav className="gg-breadcrumb" aria-label="Location">
-            <span className="gg-crumb gg-crumb-mute">Song</span>
-            <span className="gg-crumb-sep" aria-hidden="true">›</span>
-            <span className="gg-crumb gg-crumb-strong" title={song.title}>{song.title}</span>
+            <span className="gg-crumb gg-crumb-mute gg-crumb-prefix">Song</span>
+            <span className="gg-crumb-sep gg-crumb-sep-title" aria-hidden="true">›</span>
+            <span className="gg-crumb gg-crumb-strong gg-crumb-title" title={song.title}>{song.title}</span>
             {song.artist && (
               <>
-                <span className="gg-crumb-sep" aria-hidden="true">·</span>
-                <span className="gg-crumb gg-crumb-mute">{song.artist}</span>
+                <span className="gg-crumb-sep gg-crumb-sep-artist" aria-hidden="true">·</span>
+                <span className="gg-crumb gg-crumb-mute gg-crumb-artist">{song.artist}</span>
               </>
             )}
             {currentSection?.name && (
               <>
-                <span className="gg-crumb-sep" aria-hidden="true">›</span>
-                <span className="gg-crumb gg-crumb-strong">{currentSection.name}</span>
+                <span className="gg-crumb-sep gg-crumb-sep-section" aria-hidden="true">›</span>
+                <span className="gg-crumb gg-crumb-strong gg-crumb-section">{currentSection.name}</span>
               </>
             )}
           </nav>
         </div>
-        <ModeSwitch mode={mode} onChange={(m) => { setMode(m); announce(m === 'rhythm' ? 'Rhythm mode' : 'Lead GODMODE'); }} />
+        <div className="gg-topbar-actions">
+          <button
+            type="button"
+            className="gg-topbar-change"
+            onClick={() => setImportOpen(true)}
+            title="Change or import a song (I)">
+            ✎ Change song
+          </button>
+          <ModeSwitch mode={mode} onChange={(m) => { setMode(m); announce(m === 'rhythm' ? 'Rhythm mode' : 'Lead GODMODE'); }} />
+        </div>
       </header>
 
       <main className="gg-main" id="gg-main" tabIndex={-1}>
         <section className="gg-stage" aria-label={mode === 'rhythm' ? 'Rhythm guitar display' : 'Lead GODMODE display'}>
-          <div className="gg-status-rail" role="region" aria-label="Playback status">
-            <div className="gg-status-chip">
-              <span className="key">Mode</span>
-              <span className="val">{mode === 'rhythm' ? 'Rhythm' : 'Lead'}</span>
-            </div>
-            <div className="gg-status-chip">
-              <span className="key">Section</span>
-              <span className="val">{currentSection?.name ?? '—'}</span>
-            </div>
-            <div className="gg-status-chip">
-              <span className="key">Bar</span>
-              <span className="val">{Math.floor(beat / song.beatsPerBar) + 1} / {song.bars.length}</span>
-            </div>
-            <div className="gg-status-chip">
-              <span className="key">BPM</span>
-              <span className="val">{Math.round(song.bpm * tempoScale)}</span>
-            </div>
-            <div className={`gg-status-chip${loopActive || (loopA !== null && loopB !== null && loopA < loopB) ? ' is-active' : ''}`}>
-              <span className="key">Loop</span>
-              <span className="val">
-                {loopA !== null && loopB !== null && loopA < loopB
-                  ? `${loopA + 1}–${loopB + 1}`
-                  : loopActive
-                    ? 'Section'
-                    : 'Off'}
-              </span>
-            </div>
-            {song.audio && trackLoaded && (
-              <div className={`gg-status-chip${trackOn ? ' is-active' : ''}`}>
-                <span className="key">Track</span>
-                <span className="val">{trackOn ? 'On' : 'Muted'}</span>
-              </div>
-            )}
-          </div>
           {mode === 'rhythm' ? (
             <RhythmView
               song={song}
@@ -888,168 +874,76 @@ export function App() {
           <TempoRampTrainer song={song} onClose={() => setRampOpen(false)} />
         )}
 
-        <aside className="gg-sidepanel">
-          <div className="gg-card">
-            <h3>Now playing</h3>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 8 }}>
-              <div style={{ fontSize: 44, fontWeight: 900 }}>{currentBar?.chord ?? '—'}</div>
-              <div style={{ color: 'var(--ink-mute)', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {currentSection.name}
-              </div>
+        <aside className="gg-sidepanel" aria-label="Song status and tools">
+          {/* --- NOW zone: chord + section + lyric + live meta + sections chips
+               + inline A-B loop + inline track status + change-song action --- */}
+          <div className="gg-card gg-now-card">
+            <div className="gg-now-hero">
+              <span className="gg-now-chord">{currentBar?.chord ?? '—'}</span>
+              <span className="gg-now-section">{currentSection.name}</span>
             </div>
             {lyricLine && (
-              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)', fontStyle: 'italic' }}>
-                “{lyricLine}”
-              </div>
+              <div className="gg-now-lyric">“{lyricLine}”</div>
             )}
-            <button
-              onClick={() => setImportOpen(true)}
-              style={{
-                marginTop: 12, padding: '10px 14px', width: '100%',
-                fontSize: 14, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase',
-                background: 'var(--bg-alt)', color: 'var(--ink)',
-                border: '3px solid var(--ink)', borderRadius: 8, cursor: 'pointer',
-                boxShadow: '3px 3px 0 var(--ink)',
-              }}>
-              ✎ Change song
-            </button>
-          </div>
-
-          {(installPrompt || installState === 'installed') && (
-            <div className="gg-card" style={{ borderColor: 'var(--accent-blue)' }}>
-              <h3 style={{ color: 'var(--accent-blue)' }}>Install app</h3>
-              {installState === 'installed' ? (
-                <div style={{ fontWeight: 800 }}>✓ Installed on this device.</div>
-              ) : (
-                <>
-                  <div style={{ fontSize: 13, color: 'var(--ink-mute)', marginBottom: 10 }}>
-                    Install Guitar Guru as a standalone app — works offline, launches full-screen on your tablet or phone.
-                  </div>
-                  <button
-                    onClick={async () => {
-                      if (!installPrompt) return;
-                      const result = await installPrompt();
-                      if (result === 'accepted') setInstallState('installed');
-                      setInstallPrompt(null);
-                    }}
-                    style={{
-                      padding: '14px 16px', width: '100%',
-                      fontSize: 15, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase',
-                      background: 'var(--accent-blue)', color: '#fff',
-                      border: '3px solid var(--ink)', borderRadius: 10, cursor: 'pointer',
-                      boxShadow: '3px 3px 0 var(--ink)',
-                      fontFamily: 'inherit',
-                    }}>
-                    📲 Install on device
-                  </button>
-                </>
-              )}
+            <div className="gg-now-meta" aria-live="polite">
+              Bar <b>{Math.floor(beat / song.beatsPerBar) + 1}</b> / {song.bars.length}
+              {' · '}
+              <b>♩ = {Math.round(song.bpm * tempoScale)}</b>
+              {' · '}
+              {song.beatsPerBar}/4
             </div>
-          )}
 
-          <div className="gg-card gg-bpm-readout">
-            <span>♩ =</span>
-            <b>{Math.round(song.bpm * tempoScale)}</b>
-            <span style={{ color: 'var(--ink-mute)', fontWeight: 700, fontSize: 14 }}>BPM · {song.beatsPerBar}/4</span>
-          </div>
+            {song.sections.length > 1 && (
+              <>
+                <div className="gg-now-divider" />
+                <h3 className="gg-now-subhead">Sections</h3>
+                <div className="gg-chip-row">
+                  {song.sections.map((section) => {
+                    const isCurrent = section === currentSection;
+                    return (
+                      <button
+                        key={`${section.name}-${section.barOffset}`}
+                        className="gg-chip"
+                        aria-current={isCurrent}
+                        onClick={() => {
+                          transportRef.current?.seek(section.barOffset * song.beatsPerBar);
+                          announce(`Jumped to ${section.name}`);
+                        }}>
+                        <span>{section.name}</span>
+                        <span className="meta">bar {section.barOffset + 1}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
-          {song.sections.length > 1 && (
-            <div className="gg-card">
-              <h3>Sections</h3>
-              <div className="gg-sections-nav">
-                {song.sections.map((section) => {
-                  const isCurrent = section === currentSection;
-                  return (
-                    <button
-                      key={`${section.name}-${section.barOffset}`}
-                      aria-current={isCurrent}
-                      onClick={() => {
-                        transportRef.current?.seek(section.barOffset * song.beatsPerBar);
-                        announce(`Jumped to ${section.name}`);
-                      }}>
-                      <span>{section.name}</span>
-                      <span className="meta">bar {section.barOffset + 1}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {song.audio && trackLoaded && (
-            <div className="gg-card" style={{ borderColor: 'var(--accent)' }}>
-              <h3 style={{ color: 'var(--accent)' }}>🎵 Track</h3>
-              <div style={{ fontSize: 15, fontWeight: 800, wordBreak: 'break-all' }}>
-                {song.audio.source.kind === 'blob'
-                  ? song.audio.filename ?? 'Attached file'
-                  : song.audio.source.url}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--ink-mute)', fontWeight: 700, marginTop: 4 }}>
-                {song.audio.mode === 'playalong' ? 'Play-along' : song.audio.mode === 'backing' ? 'Backing track' : 'Teacher track'}
-                {trackOn ? ' · on' : ' · muted'} · offset {song.audio.offsetSec.toFixed(2)}s
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 4 }}>
-                Press <b>A</b> to toggle
-              </div>
-            </div>
-          )}
-
-          {(loopA !== null || loopB !== null) && (
-            <div className="gg-card" style={{ borderColor: 'var(--accent)' }}>
-              <h3 style={{ color: 'var(--accent)' }}>A–B loop</h3>
-              <div style={{ fontSize: 18, fontWeight: 800 }}>
+            {(loopA !== null || loopB !== null) && (
+              <div className="gg-now-inline" role="status">
+                <span className="label">A–B</span>
                 {loopA !== null && loopB !== null && loopA < loopB
                   ? <>Bar {loopA + 1} → {loopB + 1} · {(loopB - loopA + 1) * song.beatsPerBar} beats</>
                   : loopA !== null
                     ? <>A at bar {loopA + 1} · set <b>B</b> to finish</>
                     : <>B at bar {(loopB ?? 0) + 1} · set <b>A</b> to finish</>}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 4 }}>
-                <b>[</b> set A · <b>]</b> set B · <b>\</b> clear
-              </div>
-            </div>
-          )}
+            )}
 
-          <div className="gg-card">
-            <h3>Practice trainers</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => setTrainerOpen(true)} style={sidebarBtn}>
-                ⏱  Chord changes / minute <span style={kbd}>T</span>
-              </button>
-              <button onClick={() => setRampOpen(true)} style={sidebarBtn}>
-                📈  Tempo ramp <span style={kbd}>G</span>
-              </button>
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 6 }}>
-              Mic-driven drills that track accuracy and auto-adjust tempo.
-            </div>
+            {song.audio && trackLoaded && (
+              <div className="gg-now-inline" role="status">
+                <span className="label">Track</span>
+                {song.audio.mode === 'playalong' ? 'Play-along' : song.audio.mode === 'backing' ? 'Backing' : 'Teacher'}
+                {' · '}{trackOn ? 'on' : 'muted'}
+                {' · '}offset {song.audio.offsetSec.toFixed(2)}s
+                {' · '}press <b>A</b> to toggle
+              </div>
+            )}
           </div>
 
-          {voiceSupported() && (
-            <div className="gg-card gg-listen-card">
-              <h3>Voice commands</h3>
-              <button
-                className={`gg-listen-btn${voiceCmdOn ? ' on' : ''}`}
-                onClick={() => { setVoiceError(null); setVoiceCmdOn((v) => !v); }}
-                aria-pressed={voiceCmdOn}>
-                {voiceCmdOn ? '● Listening for commands' : '🗣  Turn on voice control'}
-              </button>
-              {voiceCmdOn && (
-                <div style={{ fontSize: 12, color: 'var(--ink-mute)', marginTop: 8, lineHeight: 1.5 }}>
-                  Say: <b>play</b> / <b>pause</b> / <b>next</b> / <b>back</b> / <b>restart</b> / <b>half speed</b> / <b>full speed</b> / <b>slower</b> / <b>faster</b> / <b>loop</b> / <b>zoom</b> / <b>where am I</b> / <b>rhythm</b> / <b>god mode</b>.
-                </div>
-              )}
-              {voiceError && (
-                <div style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 13, marginTop: 6 }}>
-                  {voiceError}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="gg-card gg-listen-card">
-            <h3>Listen mode</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* --- Microphone: listen + voice commands, unified --- */}
+          <details className="gg-disclosure" open={listening || voiceCmdOn}>
+            <summary>Microphone</summary>
+            <div className="gg-disclosure-body gg-listen-card">
               <button
                 className={`gg-listen-btn${listening ? ' on' : ''}`}
                 onClick={() => { setMicError(null); setListening((v) => !v); }}
@@ -1082,35 +976,51 @@ export function App() {
                   Mic error: {micError}
                 </div>
               )}
-            </div>
-          </div>
 
-          {showFingers && (
-            <div className="gg-card">
-              <h3>Finger {fingerEncoding === 'pattern' ? 'patterns' : 'colours'}</h3>
-              <FingerLegend size={36} encoding={fingerEncoding} />
-              <div className="row" style={{ marginTop: 10, display: 'flex', gap: 6 }}>
-                <button
-                  className="toggle"
-                  aria-pressed={fingerEncoding === 'color'}
-                  onClick={() => setFingerEncoding('color')}
-                  style={toggleBtn}>
-                  Colour
-                </button>
-                <button
-                  className="toggle"
-                  aria-pressed={fingerEncoding === 'pattern'}
-                  onClick={() => setFingerEncoding('pattern')}
-                  style={toggleBtn}>
-                  Pattern + colour
-                </button>
-              </div>
+              {voiceSupported() && (
+                <>
+                  <h4 className="gg-disclosure-subhead">Voice commands</h4>
+                  <button
+                    className={`gg-listen-btn${voiceCmdOn ? ' on' : ''}`}
+                    onClick={() => { setVoiceError(null); setVoiceCmdOn((v) => !v); }}
+                    aria-pressed={voiceCmdOn}>
+                    {voiceCmdOn ? '● Listening for commands' : '🗣  Turn on voice control'}
+                  </button>
+                  {voiceCmdOn && (
+                    <p className="gg-disclosure-hint">
+                      Say: <b>play</b> / <b>pause</b> / <b>next</b> / <b>back</b> / <b>restart</b> / <b>half speed</b> / <b>full speed</b> / <b>slower</b> / <b>faster</b> / <b>loop</b> / <b>zoom</b> / <b>where am I</b> / <b>rhythm</b> / <b>god mode</b>.
+                    </p>
+                  )}
+                  {voiceError && (
+                    <div style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 13 }}>
+                      {voiceError}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
+          </details>
 
-          <div className="gg-card">
-            <h3>Accessibility extras</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* --- Practice trainers --- */}
+          <details className="gg-disclosure">
+            <summary>Practice trainers</summary>
+            <div className="gg-disclosure-body">
+              <button onClick={() => setTrainerOpen(true)} style={sidebarBtn}>
+                ⏱  Chord changes / minute <span style={kbd}>T</span>
+              </button>
+              <button onClick={() => setRampOpen(true)} style={sidebarBtn}>
+                📈  Tempo ramp <span style={kbd}>G</span>
+              </button>
+              <p className="gg-disclosure-hint">
+                Mic-driven drills that track accuracy and auto-adjust tempo.
+              </p>
+            </div>
+          </details>
+
+          {/* --- Accessibility: narration + spotlight + sonification + finger legend --- */}
+          <details className="gg-disclosure">
+            <summary>Accessibility</summary>
+            <div className="gg-disclosure-body">
               <button
                 onClick={() => {
                   const bar = song.bars[Math.floor(beat / song.beatsPerBar)];
@@ -1135,21 +1045,84 @@ export function App() {
                 style={fingerSonification ? sidebarBtnActive : sidebarBtn}>
                 {fingerSonification ? '✓ Finger sonification' : '🎵  Finger sonification'}
               </button>
-            </div>
-          </div>
 
-          <TweaksPanel
-            theme={theme}
-            density={density}
-            chordSize={chordSize}
-            showLyrics={showLyrics}
-            showFingers={showFingers}
-            onTheme={setTheme}
-            onDensity={setDensity}
-            onChordSize={setChordSize}
-            onShowLyrics={setShowLyrics}
-            onShowFingers={setShowFingers}
-          />
+              {showFingers && (
+                <>
+                  <h4 className="gg-disclosure-subhead">
+                    Finger {fingerEncoding === 'pattern' ? 'patterns' : 'colours'}
+                  </h4>
+                  <FingerLegend size={36} encoding={fingerEncoding} />
+                  <div className="row" style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                    <button
+                      className="toggle"
+                      aria-pressed={fingerEncoding === 'color'}
+                      onClick={() => setFingerEncoding('color')}
+                      style={toggleBtn}>
+                      Colour
+                    </button>
+                    <button
+                      className="toggle"
+                      aria-pressed={fingerEncoding === 'pattern'}
+                      onClick={() => setFingerEncoding('pattern')}
+                      style={toggleBtn}>
+                      Pattern + colour
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </details>
+
+          {/* --- Settings: theme, sizing, display, install --- */}
+          <details className="gg-disclosure">
+            <summary>Settings</summary>
+            <div className="gg-disclosure-body">
+              <TweaksPanel
+                theme={theme}
+                density={density}
+                chordSize={chordSize}
+                showLyrics={showLyrics}
+                showFingers={showFingers}
+                onTheme={setTheme}
+                onDensity={setDensity}
+                onChordSize={setChordSize}
+                onShowLyrics={setShowLyrics}
+                onShowFingers={setShowFingers}
+              />
+
+              {(installPrompt || installState === 'installed') && (
+                <>
+                  <h4 className="gg-disclosure-subhead">Install app</h4>
+                  {installState === 'installed' ? (
+                    <div style={{ fontWeight: 800 }}>✓ Installed on this device.</div>
+                  ) : (
+                    <>
+                      <p className="gg-disclosure-hint">
+                        Install Guitar Guru as a standalone app — works offline, launches full-screen on your tablet or phone.
+                      </p>
+                      <button
+                        onClick={async () => {
+                          if (!installPrompt) return;
+                          const result = await installPrompt();
+                          if (result === 'accepted') setInstallState('installed');
+                          setInstallPrompt(null);
+                        }}
+                        style={{
+                          padding: '12px 14px', width: '100%',
+                          fontSize: 14, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase',
+                          background: 'var(--accent-blue)', color: '#fff',
+                          border: '3px solid var(--ink)', borderRadius: 10, cursor: 'pointer',
+                          boxShadow: '3px 3px 0 var(--ink)',
+                          fontFamily: 'inherit',
+                        }}>
+                        📲 Install on device
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </details>
         </aside>
       </main>
 
@@ -1194,10 +1167,8 @@ export function App() {
               });
             }}
           />
-          <div style={{ marginTop: 8, fontSize: 13, textAlign: 'center' }}>
-            Shortcuts: <b>Space</b> play · <b>← →</b> bar · <b>R</b> restart · <b>M</b> mode · <b>Z</b> close-up · <b>I</b> import · <b>L</b> listen · <b>V</b> voice · <b>?</b> status · <b>T</b> trainer · <b>G</b> ramp · <b>D</b> narrate · <b>F</b> focus · <b>[ ]</b> A/B loop · <b>\</b> clear · <b>A</b> track ·
-            {' '}
-            {Object.keys(CHORD_LIB).length} chord shapes loaded
+          <div style={{ marginTop: 6, fontSize: 12, textAlign: 'center', color: 'var(--ink-mute)', fontWeight: 700, letterSpacing: '0.04em' }}>
+            {Object.keys(CHORD_LIB).length} chord shapes · press <b>?</b> to hear status
           </div>
         </div>
       </footer>

@@ -4,3 +4,7 @@ dist
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# Playwright MCP browser artifacts (screenshots, traces, console logs)
+.playwright-mcp/
+/ui-*.png
